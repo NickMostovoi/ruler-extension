@@ -1,0 +1,116 @@
+.ruler__overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9997;
+}
+
+.ruler__horizontal, .ruler__vertical {
+    position: fixed;
+    z-index: 9998;
+}
+
+.ruler__horizontal {
+    left: 0;
+    width: 100%;
+}
+
+.ruler__vertical {
+    top: 0;
+    height: 100%;
+}
+
+.toolbar {
+    position: fixed;
+    z-index: 9999;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    background-color: #f9f9f9;
+    width: 220px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.toolbar__header {
+    background-color: #ddd;
+    color: #333;
+    padding: 8px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #ccc;
+    cursor: grab;
+}
+
+.toolbar__title {
+    margin-left: 5px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.toolbar__toggle {
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 8px;
+}
+
+.toolbar__content {
+    padding: 15px;
+}
+
+.toolbar__group {
+    margin-bottom: 10px;
+}
+
+.toolbar__label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #333;
+}
+
+.toolbar__input {
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.toolbar__input--key {
+    width: 30px;
+    margin-right: 5px;
+}
+
+.toolbar__hint {
+    color: #777;
+}
+
+.toolbar__button {
+    background-color: #eee;
+    color: #333;
+    border: 1px solid #ccc;
+    padding: 8px 15px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+}
+
+.toolbar__button:hover {
+    background-color: #ddd;
+}
+
+.toolbar__input--range,
+.toolbar__input--color,
+.toolbar__input--select {
+    margin-bottom: 10px;
+}
+
+.toolbar--collapsed .toolbar__content {
+    display: none;
+}
