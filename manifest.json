@@ -1,12 +1,15 @@
 {
     "manifest_version": 3,
     "name": "Ruler Tool",
-    "version": "1.0",
+    "version": "1.3.0",
     "description": "A helpful ruler extension",
     "permissions": [
         "activeTab",
         "scripting",
         "storage"
+    ],
+    "host_permissions": [
+        "<all_urls>"
     ],
     "action": {
         "default_icon": {
