@@ -1,4 +1,6 @@
 window.ShapesModule = (() => {
+    const SHAPE_CONTAINER_ID = 'shape-container';
+
     let shapes = [];
     let shapeCounter = 0;
     let isDrawing = false;
@@ -12,25 +14,23 @@ window.ShapesModule = (() => {
     let dragOffsetY = 0;
     let activeShape = null;
     let shapeContainer = null;
-    let shapeContainerId = 'shape-container';
     let currentOpacity = 0.5;
     let currentColor = '#00ff00';
     let initialRectData = null;
 
-    let boundHandleMouseMove = null;
-    let boundHandleMouseUp = null;
-    let boundHandleDocumentClick = null;
-    let boundHandleResizeMouseMove = null;
-    let boundHandleResizeMouseUp = null;
-    let boundHandleDragMouseMove = null;
-    let boundHandleDragMouseUp = null;
+    let onMouseMove = null;
+    let onMouseUp = null;
+    let onDocumentClick = null;
+    let onResizeMouseMove = null;
+    let onResizeMouseUp = null;
+    let onDragMouseMove = null;
+    let onDragMouseUp = null;
 
-    function initShapeModule(containerIdParam, initialOpacity, initialColor) {
+    function initShapeModule(rulerElement, initialOpacity, initialColor) {
         if (shapeContainer) {
             cleanupShapes();
         }
 
-        shapeContainerId = containerIdParam || shapeContainerId;
         currentOpacity = initialOpacity;
         currentColor = initialColor;
         shapes = [];
@@ -39,16 +39,16 @@ window.ShapesModule = (() => {
         isDrawing = isResizing = isDragging = false;
 
         shapeContainer = document.createElement('div');
-        shapeContainer.id = shapeContainerId;
-        document.body.appendChild(shapeContainer);
+        shapeContainer.id = SHAPE_CONTAINER_ID;
+        rulerElement.appendChild(shapeContainer);
 
-        boundHandleMouseMove = handleMouseMove.bind(null);
-        boundHandleMouseUp = handleMouseUp.bind(null);
-        boundHandleDocumentClick = handleDocumentClick.bind(null);
-        boundHandleResizeMouseMove = handleResizeMouseMove.bind(null);
-        boundHandleResizeMouseUp = handleResizeMouseUp.bind(null);
-        boundHandleDragMouseMove = handleDragMouseMove.bind(null);
-        boundHandleDragMouseUp = handleDragMouseUp.bind(null);
+        onMouseMove = handleMouseMove.bind(null);
+        onMouseUp = handleMouseUp.bind(null);
+        onDocumentClick = handleDocumentClick.bind(null);
+        onResizeMouseMove = handleResizeMouseMove.bind(null);
+        onResizeMouseUp = handleResizeMouseUp.bind(null);
+        onDragMouseMove = handleDragMouseMove.bind(null);
+        onDragMouseUp = handleDragMouseUp.bind(null);
 
         shapeContainer.addEventListener('mousedown', handleMouseDown);
     }
@@ -66,21 +66,23 @@ window.ShapesModule = (() => {
         currentShapeElement = document.createElement('div');
         currentShapeElement.id = shapeId;
         currentShapeElement.className = 'shape';
-        currentShapeElement.style.left = `${startX}px`;
-        currentShapeElement.style.top = `${startY}px`;
-        currentShapeElement.style.width = '0px';
-        currentShapeElement.style.height = '0px';
-        currentShapeElement.style.backgroundColor = hexToRgba(currentColor, currentOpacity);
+
+        Object.assign(currentShapeElement.style, {
+            left: `${startX}px`,
+            top: `${startY}px`,
+            width: '0px',
+            height: '0px',
+            backgroundColor: hexToRgba(currentColor, currentOpacity)
+        });
 
         const sizeDisplay = document.createElement('div');
         sizeDisplay.className = 'shape-size-display';
         currentShapeElement.appendChild(sizeDisplay);
         updateSizeDisplay(currentShapeElement, 0, 0);
-
         shapeContainer?.appendChild(currentShapeElement);
 
-        document.addEventListener('mousemove', boundHandleMouseMove);
-        document.addEventListener('mouseup', boundHandleMouseUp);
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
     }
 
     function handleMouseMove(event) {
@@ -91,20 +93,23 @@ window.ShapesModule = (() => {
         const newLeft = Math.min(event.clientX, startX);
         const newTop = Math.min(event.clientY, startY);
 
-        currentShapeElement.style.width = `${width}px`;
-        currentShapeElement.style.height = `${height}px`;
-        currentShapeElement.style.left = `${newLeft}px`;
-        currentShapeElement.style.top = `${newTop}px`;
+        Object.assign(currentShapeElement.style, {
+            width: `${width}px`,
+            height: `${height}px`,
+            left: `${newLeft}px`,
+            top: `${newTop}px`
+        });
 
         updateSizeDisplay(currentShapeElement, width, height);
     }
 
     function handleMouseUp(event) {
         if (!isDrawing || event.button !== 0) return;
+
         isDrawing = false;
 
-        document.removeEventListener('mousemove', boundHandleMouseMove);
-        document.removeEventListener('mouseup', boundHandleMouseUp);
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
 
         if (currentShapeElement) {
             const finalWidth = parseInt(currentShapeElement.style.width);
@@ -124,10 +129,7 @@ window.ShapesModule = (() => {
 
     function updateSizeDisplay(shapeElement, width, height) {
         const display = shapeElement?.querySelector('.shape-size-display');
-
-        if (display) {
-            display.textContent = `${Math.round(width)} x ${Math.round(height)}`;
-        }
+        if (display) display.textContent = `${Math.round(width)} x ${Math.round(height)}`;
     }
 
     function addInteraction(shapeElement) {
@@ -137,6 +139,7 @@ window.ShapesModule = (() => {
 
     function handleShapeDoubleClick(event) {
         event.stopPropagation();
+
         if (event.button !== 0) return;
 
         const shapeElement = event.currentTarget;
@@ -156,7 +159,7 @@ window.ShapesModule = (() => {
         addDeleteButton(shapeElement);
         updateSizeDisplay(shapeElement, parseInt(shapeElement.style.width), parseInt(shapeElement.style.height));
 
-        document.addEventListener('click', boundHandleDocumentClick, true);
+        document.addEventListener('click', onDocumentClick, true);
     }
 
     function deactivateShape(shapeElement) {
@@ -167,19 +170,13 @@ window.ShapesModule = (() => {
 
         if (activeShape === shapeElement) {
             activeShape = null;
-
-            document.removeEventListener('click', boundHandleDocumentClick, true);
+            document.removeEventListener('click', onDocumentClick, true);
         }
     }
 
     function handleDocumentClick(event) {
-        if (activeShape?.contains(event.target)) {
-            return;
-        }
-
-        if (activeShape) {
-            deactivateShape(activeShape);
-        }
+        if (activeShape?.contains(event.target)) return;
+        if (activeShape) deactivateShape(activeShape);
     }
 
     function removeInteractionControls(shapeElement) {
@@ -200,11 +197,13 @@ window.ShapesModule = (() => {
 
     function handleResizeStart(event) {
         event.stopPropagation();
+
         if (event.button !== 0) return;
 
         isResizing = true;
         resizeHandle = event.target;
         activeShape = resizeHandle.closest('.shape');
+
         if (!activeShape) {
             isResizing = false;
             return;
@@ -218,8 +217,8 @@ window.ShapesModule = (() => {
             width: parseFloat(style.width), height: parseFloat(style.height)
         };
 
-        document.addEventListener('mousemove', boundHandleResizeMouseMove);
-        document.addEventListener('mouseup', boundHandleResizeMouseUp);
+        document.addEventListener('mousemove', onResizeMouseMove);
+        document.addEventListener('mouseup', onResizeMouseUp);
     }
 
     function handleResizeMouseMove(event) {
@@ -251,16 +250,19 @@ window.ShapesModule = (() => {
             newHeight = minSize;
         }
 
-        activeShape.style.left = `${newX}px`;
-        activeShape.style.top = `${newY}px`;
-        activeShape.style.width = `${newWidth}px`;
-        activeShape.style.height = `${newHeight}px`;
+        Object.assign(activeShape.style, {
+            left: `${newX}px`,
+            top: `${newY}px`,
+            width: `${newWidth}px`,
+            height: `${newHeight}px`
+        });
 
         updateSizeDisplay(activeShape, newWidth, newHeight);
     }
 
     function handleResizeMouseUp(event) {
         if (!isResizing || event.button !== 0) return;
+
         isResizing = false;
 
         if (activeShape) {
@@ -269,12 +271,14 @@ window.ShapesModule = (() => {
         initialRectData = null;
         resizeHandle = null;
 
-        document.removeEventListener('mousemove', boundHandleResizeMouseMove);
-        document.removeEventListener('mouseup', boundHandleResizeMouseUp);
+        document.removeEventListener('mousemove', onResizeMouseMove);
+        document.removeEventListener('mouseup', onResizeMouseUp);
     }
 
     function handleDragStart(event) {
-        if (!event.currentTarget.classList.contains('active') ||
+        const target = event.currentTarget;
+
+        if (!target.classList.contains('active') ||
             event.target.classList.contains('resize-handle') ||
             event.target.classList.contains('delete-button') ||
             event.button !== 0 || isResizing || isDrawing) {
@@ -283,38 +287,41 @@ window.ShapesModule = (() => {
 
         event.stopPropagation();
         isDragging = true;
-        activeShape = event.currentTarget;
+        activeShape = target;
         activeShape.style.cursor = 'grabbing';
+        const {left, top} = window.getComputedStyle(activeShape);
+        dragOffsetX = event.clientX - parseFloat(left);
+        dragOffsetY = event.clientY - parseFloat(top);
 
-        const style = window.getComputedStyle(activeShape);
-        dragOffsetX = event.clientX - parseFloat(style.left);
-        dragOffsetY = event.clientY - parseFloat(style.top);
-
-        document.addEventListener('mousemove', boundHandleDragMouseMove);
-        document.addEventListener('mouseup', boundHandleDragMouseUp);
+        document.addEventListener('mousemove', onDragMouseMove);
+        document.addEventListener('mouseup', onDragMouseUp);
     }
 
     function handleDragMouseMove(event) {
         if (!isDragging || !activeShape) return;
 
-        activeShape.style.left = `${event.clientX - dragOffsetX}px`;
-        activeShape.style.top = `${event.clientY - dragOffsetY}px`;
+        Object.assign(activeShape.style, {
+            left: `${event.clientX - dragOffsetX}px`,
+            top: `${event.clientY - dragOffsetY}px`
+        });
     }
 
     function handleDragMouseUp(event) {
         if (!isDragging || event.button !== 0) return;
+
         isDragging = false;
 
         if (activeShape) {
             activeShape.style.cursor = '';
         }
 
-        document.removeEventListener('mousemove', boundHandleDragMouseMove);
-        document.removeEventListener('mouseup', boundHandleDragMouseUp);
+        document.removeEventListener('mousemove', onDragMouseMove);
+        document.removeEventListener('mouseup', onDragMouseUp);
     }
 
     function addDeleteButton(shapeElement) {
         const deleteBtn = document.createElement('div');
+
         deleteBtn.className = 'delete-button';
         deleteBtn.innerHTML = 'X';
         shapeElement.appendChild(deleteBtn);
@@ -349,23 +356,23 @@ window.ShapesModule = (() => {
 
     function hexToRgba(hex, alpha) {
         hex = hex.replace('#', '');
-
         if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
         if (hex.length !== 6) return `rgba(255,0,0,${alpha})`;
         const r = parseInt(hex.substring(0, 2), 16);
         const g = parseInt(hex.substring(2, 4), 16);
         const b = parseInt(hex.substring(4, 6), 16);
+
         return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, alpha))})`;
     }
 
     function cleanupShapes() {
-        if (boundHandleMouseMove) document.removeEventListener('mousemove', boundHandleMouseMove);
-        if (boundHandleMouseUp) document.removeEventListener('mouseup', boundHandleMouseUp);
-        if (boundHandleDocumentClick) document.removeEventListener('click', boundHandleDocumentClick, true);
-        if (boundHandleResizeMouseMove) document.removeEventListener('mousemove', boundHandleResizeMouseMove);
-        if (boundHandleResizeMouseUp) document.removeEventListener('mouseup', boundHandleResizeMouseUp);
-        if (boundHandleDragMouseMove) document.removeEventListener('mousemove', boundHandleDragMouseMove);
-        if (boundHandleDragMouseUp) document.removeEventListener('mouseup', boundHandleDragMouseUp);
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.removeEventListener('click', onDocumentClick, true);
+        document.removeEventListener('mousemove', onResizeMouseMove);
+        document.removeEventListener('mouseup', onResizeMouseUp);
+        document.removeEventListener('mousemove', onDragMouseMove);
+        document.removeEventListener('mouseup', onDragMouseUp);
 
         shapeContainer?.remove();
 
@@ -374,17 +381,15 @@ window.ShapesModule = (() => {
         activeShape = null;
         isDrawing = isResizing = isDragging = false;
         currentShapeElement = null;
-        boundHandleMouseMove = boundHandleMouseUp = boundHandleDocumentClick = null;
-        boundHandleResizeMouseMove = boundHandleResizeMouseUp = null;
-        boundHandleDragMouseMove = boundHandleDragMouseUp = null;
+        onMouseMove = onMouseUp = onDocumentClick = null;
+        onResizeMouseMove = onResizeMouseUp = null;
+        onDragMouseMove = onDragMouseUp = null;
     }
 
     function toggleShapeVisibility(visible) {
         if (shapeContainer) {
-            shapeContainer.style.display = visible ? 'block' : 'none';
-
-            const shapeElement = shapeContainer.querySelector('.shape.active');
-            if (!visible) deactivateShape(shapeElement);
+            const active = shapeContainer.querySelector('.shape.active');
+            if (!visible) deactivateShape(active);
         }
     }
 

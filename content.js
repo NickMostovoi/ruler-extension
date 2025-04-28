@@ -1,6 +1,5 @@
 (() => {
     const RULER_ID = 'ruler';
-    const SHAPE_CONTAINER_ID = 'shape-container';
     const Shapes = window.ShapesModule;
     const onMessage = chrome?.runtime?.onMessage;
 
@@ -93,61 +92,69 @@
             <div class="ruler__vertical"></div>
             <div class="toolbar">
                 <div class="toolbar__header">
-                    <span class="toolbar__title">Ruler Settings 1</span>
+                    <span class="toolbar__title">Ruler Settings</span>
                     <button class="toolbar__toggle">▲</button>
                 </div>
                 <div class="toolbar__content">
                     <div class="toolbar__section">
                         <span class="toolbar__section-title">General</span>
-                        <div class="toolbar__group">
-                            <label class="toolbar__label">Overlay opacity:</label>
-                            <input type="range" min="0" max="0.8" step="0.05" class="toolbar__input toolbar__input--range opacitySlider">
-                        </div>
-                        <div class="toolbar__group">
-                            <label class="toolbar__label">Line Thickness:</label>
-                            <input type="range" min="1" max="5" class="toolbar__input toolbar__input--range lineThicknessSlider">
-                        </div>
-                        <div class="toolbar__group">
-                            <label class="toolbar__label">Line Color:</label>
-                            <input type="color" class="toolbar__input toolbar__input--color lineColorPicker">
-                        </div>
-                        <div class="toolbar__group">
-                            <label class="toolbar__label" for="hideLinesCheckbox">Hide Lines:</label>
-                            <input type="checkbox" id="hideLinesCheckbox" class="toolbar__input toolbar__input--checkbox hideLinesCheckbox">
-                        </div>
-                        <div class="toolbar__group">
-                            <label class="toolbar__label">Toggle Toolbar Key:</label>
-                            <input type="text" class="toolbar__input toolbar__input--key toggleToolbarKeyInput" maxlength="1">
-                            <span class="toolbar__hint">Press key</span>
-                        </div>
-                        <div class="toolbar__group">
-                            <label class="toolbar__label">Toggle Extension Key:</label>
-                            <input type="text" class="toolbar__input toolbar__input--key toggleExtensionKeyInput" maxlength="1">
-                            <span class="toolbar__hint">Press key</span>
-                        </div>
-                        <div class="toolbar__group">
-                            <label class="toolbar__label">Cursor Type:</label>
-                            <select class="toolbar__input toolbar__input--select cursorTypeSelect">
-                                <option value="default">Default</option>
-                                <option value="none">None</option>
-                                <option value="crosshair">Crosshair</option>
-                                <option value="all-scroll">All-scroll</option>
-                            </select>
+                        <div class="toolbar__controls-container">
+                            <div class="toolbar__controls-group">
+                                <div class="toolbar__group">
+                                    <label class="toolbar__label">Overlay opacity:</label>
+                                    <input type="range" min="0" max="0.8" step="0.05" class="toolbar__input toolbar__input--range opacitySlider">
+                                </div>
+                                <div class="toolbar__group">
+                                    <label class="toolbar__label">Cursor Type:</label>
+                                    <select class="toolbar__input toolbar__input--select cursorTypeSelect">
+                                        <option value="default">Default</option>
+                                        <option value="none">None</option>
+                                        <option value="crosshair">Crosshair</option>
+                                        <option value="all-scroll">All-scroll</option>
+                                    </select>
+                                </div>
+                                <div class="toolbar__group">
+                                    <label class="toolbar__label">Line Color:</label>
+                                    <input type="color" class="toolbar__input toolbar__input--color lineColorPicker">
+                                </div>
+                                <div class="toolbar__group">
+                                    <label class="toolbar__label" for="hideLinesCheckbox">Hide Lines:</label>
+                                    <input type="checkbox" id="hideLinesCheckbox" class="toolbar__input toolbar__input--checkbox hideLinesCheckbox">
+                                </div>
+                            </div>
+                            <div class="toolbar__controls-group">
+                                <div class="toolbar__group">
+                                    <label class="toolbar__label">Line Thickness:</label>
+                                    <input type="range" min="1" max="5" class="toolbar__input toolbar__input--range lineThicknessSlider">
+                                </div>
+                                <div class="toolbar__group">
+                                    <label class="toolbar__label">Toggle Toolbar Key:</label>
+                                    <input type="text" class="toolbar__input toolbar__input--key toggleToolbarKeyInput" maxlength="1">
+                                </div>
+                                <div class="toolbar__group">
+                                    <label class="toolbar__label">Toggle Extension Key:</label>
+                                    <input type="text" class="toolbar__input toolbar__input--key toggleExtensionKeyInput" maxlength="1">
+                                </div>
+                            </div>
                         </div>
                     </div>
-
                     <div class="toolbar__section">
                         <span class="toolbar__section-title">Shapes</span>
-                        <div class="toolbar__group">
-                            <label class="toolbar__label">Shape Opacity:</label>
-                            <input type="range" min="0.1" max="1" step="0.05" class="toolbar__input toolbar__input--range shapeOpacitySlider">
-                        </div>
-                        <div class="toolbar__group">
-                            <label class="toolbar__label">Shape Color:</label>
-                            <input type="color" class="toolbar__input toolbar__input--color shapeColorPicker">
+                        <div class="toolbar__controls-container">
+                            <div class="toolbar__controls-group">
+                                <div class="toolbar__group">
+                                    <label class="toolbar__label">Shape Opacity:</label>
+                                    <input type="range" min="0.1" max="1" step="0.05" class="toolbar__input toolbar__input--range shapeOpacitySlider">
+                                </div>
+                            </div>
+                            <div class="toolbar__controls-group">
+                                <div class="toolbar__group">
+                                    <label class="toolbar__label">Shape Color:</label>
+                                    <input type="color" class="toolbar__input toolbar__input--color shapeColorPicker">
+                                </div>
+                            </div>
                         </div>
                     </div>
-
                     <button class="toolbar__button toolbar__button--reset reset-settings-button">Reset Settings</button>
                 </div>
             </div>
@@ -253,7 +260,7 @@
         document.body.style.cursor = settings[storageKeys.cursorType];
 
         Shapes?.init?.(
-            SHAPE_CONTAINER_ID,
+            rulerElement,
             parseFloat(settings[storageKeys.shapeOpacity] ?? defaultSettings[storageKeys.shapeOpacity]),
             settings[storageKeys.shapeColor] ?? defaultSettings[storageKeys.shapeColor]
         );
