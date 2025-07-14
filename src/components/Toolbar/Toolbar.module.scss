@@ -1,0 +1,218 @@
+@use '../../styles/variables' as vars;
+
+.toolbar {
+    position: fixed;
+    z-index: vars.$z-toolbar;
+    box-shadow: vars.$box-shadow-toolbar;
+    width: 360px;
+    background-color: vars.$toolbar-bg-color;
+    backdrop-filter: blur(5px);
+    border-radius: vars.$border-radius-s;
+    overflow: hidden;
+}
+
+.header {
+    background-color: vars.$toolbar-header-bg-color;
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: grab;
+    border-bottom: 1px solid vars.$toolbar-border-color;
+}
+
+.title {
+    font-size: vars.$font-size-large;
+    font-weight: vars.$font-weight-bold;
+    color: vars.$primary-color;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.toggle {
+    background: none;
+    border: none;
+    color: vars.$toolbar-toggle-color;
+    font-size: vars.$font-size-extra-large;
+    padding: 0;
+    cursor: pointer;
+
+    &:hover {
+        color: vars.$secondary-color;
+    }
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 14px 20px;
+}
+
+.sectionTitle {
+    font-weight: vars.$font-weight-bold;
+    color: vars.$primary-color;
+    font-size: vars.$font-size-medium;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+.controlsContainer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.controlsGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.label {
+    font-size: vars.$font-size-small;
+    color: vars.$secondary-color;
+    margin-bottom: 4px;
+}
+
+.inputRange {
+    appearance: none;
+    width: 100%;
+    height: 24px;
+    border-radius: vars.$border-radius-s;
+    background-color: vars.$input-bg-color;
+    cursor: pointer;
+
+    &::-webkit-slider-thumb {
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        background: vars.$primary-color;
+        border-radius: vars.$border-radius-s;
+        box-shadow: vars.$box-shadow-range-thumb;
+        transition: background-color vars.$transition-short;
+        cursor: pointer;
+    }
+
+    &:hover::-webkit-slider-thumb {
+        background-color: vars.$primary-color-hover;
+    }
+}
+
+.inputSelect {
+    appearance: none;
+    width: 100%;
+    height: 30px;
+    border-radius: vars.$border-radius-s;
+    background-color: vars.$input-bg-color;
+    color: vars.$secondary-color;
+    padding: 4px 30px 4px 14px;
+    border: none;
+    cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, vars.$secondary-color 50%),
+    linear-gradient(135deg, vars.$secondary-color 50%, transparent 50%);
+    background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+
+    option {
+        background-color: vars.$primary-color;
+        color: vars.$secondary-color;
+    }
+}
+
+.inputColor {
+    appearance: none;
+    width: 55px;
+    height: 30px;
+    border: none;
+    border-radius: vars.$border-radius-s;
+    background-color: transparent;
+    cursor: pointer;
+    padding: 0;
+
+    &::-webkit-color-swatch-wrapper {
+        padding: 0;
+        border-radius: vars.$border-radius-s;
+    }
+}
+
+.inputCheckbox {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background-color: vars.$input-bg-color;
+    border-radius: vars.$border-radius-s;
+    cursor: pointer;
+    position: relative;
+    margin-top: 4px;
+
+    &:checked {
+        background-color: vars.$primary-color;
+    }
+
+    &:checked:hover {
+        background-color: vars.$primary-color-hover;
+    }
+
+    &:checked::before {
+        content: '✓';
+        position: absolute;
+        color: vars.$secondary-color;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+}
+
+.inputKey {
+    width: 50px;
+    height: 30px;
+    text-align: center;
+    font-size: vars.$font-size-medium;
+    border-radius: vars.$border-radius-s;
+    background-color: vars.$input-bg-color;
+    color: vars.$primary-color;
+    border: none;
+    outline: none;
+    cursor: pointer;
+}
+
+.button {
+    color: vars.$secondary-color;
+    border: none;
+    padding: 10px 20px;
+    font-size: vars.$font-size-medium;
+    transition: background-color vars.$transition-medium;
+    cursor: pointer;
+}
+
+.reset {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin: 0;
+    background-color: vars.$primary-color;
+    color: vars.$secondary-color;
+    border: none;
+    padding: 10px 20px;
+    font-size: vars.$font-size-medium;
+    transition: background-color vars.$transition-medium;
+    cursor: pointer;
+
+    &:hover {
+        background-color: vars.$primary-color-hover;
+    }
+}
+
+.toolbarCollapsed {
+    .content,
+    .reset {
+        display: none;
+    }
+}
+
+.notice {
+    margin-top: 8px;
+    font-size: vars.$font-size-small;
+    color: vars.$secondary-color;
+    font-style: italic;
+}

@@ -1,0 +1,123 @@
+@use '../../styles/variables' as vars;
+
+.shapeContainer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: vars.$z-shapes;
+    pointer-events: auto;
+    cursor: inherit;
+}
+
+.shape {
+    position: absolute;
+    user-select: none;
+    pointer-events: auto;
+    cursor: grab;
+}
+
+.shape.active {
+    z-index: vars.$z-crosshairs;
+}
+
+.resizeHandle {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background-color: vars.$primary-color;
+    border: 1px solid vars.$secondary-color;
+    border-radius: 50%;
+}
+
+.nw {
+    top: -8px;
+    left: -8px;
+    cursor: nwse-resize;
+}
+
+.ne {
+    top: -8px;
+    right: -8px;
+    cursor: nesw-resize;
+}
+
+.sw {
+    bottom: -8px;
+    left: -8px;
+    cursor: nesw-resize;
+}
+
+.se {
+    bottom: -8px;
+    right: -8px;
+    cursor: nwse-resize;
+}
+
+.n {
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: ns-resize;
+}
+
+.s {
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: ns-resize;
+}
+
+.w {
+    top: 50%;
+    left: -8px;
+    transform: translateY(-50%);
+    cursor: ew-resize;
+}
+
+.e {
+    top: 50%;
+    right: -8px;
+    transform: translateY(-50%);
+    cursor: ew-resize;
+}
+
+.deleteButton {
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    width: 24px;
+    height: 24px;
+    background-color: vars.$primary-color;
+    color: vars.$secondary-color;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: vars.$font-size-medium;
+    font-weight: vars.$font-weight-bold;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 1px solid vars.$secondary-color;
+    transition: transform vars.$transition-short;
+}
+
+.deleteButton:hover {
+    background-color: vars.$primary-color-hover;
+    transform: scale(1.15);
+}
+
+.shapeSizeDisplay {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: vars.$shape-size-display-bg;
+    color: vars.$secondary-color;
+    padding: 4px 10px;
+    border-radius: vars.$border-radius-s;
+    font-family: monospace;
+    font-size: vars.$font-size-small;
+    white-space: nowrap;
+    user-select: none;
+}

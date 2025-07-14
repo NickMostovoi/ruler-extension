@@ -1,0 +1,31 @@
+$primary-color: #daa520;
+$primary-color-hover: #bc8500;
+$secondary-color: #f0f0f0;
+$toolbar-toggle-color: #a9a9a9;
+$input-bg-color: rgba(255, 255, 255, 0.2);
+$shape-hover-shadow: rgba(255, 255, 255, 0.7);
+$toolbar-bg-color: rgba(0, 0, 0, 0.7);
+$toolbar-header-bg-color: rgba(0, 0, 0, 0.75);
+$toolbar-border-color: rgba(0, 0, 0, 0.35);
+$shape-size-display-bg: rgba(0, 0, 0, 0.7);
+
+$box-shadow-toolbar: 0 0 20px rgba(0, 0, 0, 0.4);
+$box-shadow-range-thumb: 0 1px 3px rgba(0, 0, 0, 0.3);
+
+$font-size-small: 14px;
+$font-size-medium: 16px;
+$font-size-large: 20px;
+$font-size-extra-large: 24px;
+
+$font-weight-bold: 700;
+
+$transition-short: 0.2s ease-in-out;
+$transition-medium: 0.3s ease;
+
+$border-radius-s: 4px;
+
+$z-root: 9999999999;
+$z-overlay: 1;
+$z-shapes: 2;
+$z-crosshairs: 3;
+$z-toolbar: 4;

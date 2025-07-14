@@ -1,0 +1,48 @@
+@use '../../styles/variables' as vars;
+
+.ruler {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: vars.$z-root;
+}
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: vars.$z-overlay;
+    pointer-events: none;
+}
+
+.shapeContainer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: vars.$z-shapes;
+    pointer-events: auto;
+    cursor: inherit;
+}
+
+.horizontal,
+.vertical {
+    position: fixed;
+    z-index: vars.$z-crosshairs;
+    pointer-events: none;
+}
+
+.horizontal {
+    left: 0;
+    width: 100%;
+}
+
+.vertical {
+    top: 0;
+    height: 100%;
+}
