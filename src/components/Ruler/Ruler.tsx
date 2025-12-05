@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useMemo} from 'react';
+import React, {useState, useEffect, useCallback, useMemo, useRef} from 'react';
 import styles from './Ruler.module.scss';
 import Toolbar from '../Toolbar/Toolbar';
 import ShapeContainer from '../ShapeContainer/ShapeContainer';
@@ -17,7 +17,7 @@ export interface Settings {
     shapeColor: string;
 }
 
-export const defaultSettings: Settings = {
+const defaultSettings: Settings = {
     opacity: 0.1,
     lineColor: '#ff0000',
     lineThickness: 1,
@@ -62,15 +62,20 @@ const Ruler: React.FC = () => {
     const [extensionHidden, setExtensionHidden] = useState(false);
     const [mouseX, setMouseX] = useState(window.innerWidth / 2);
     const [mouseY, setMouseY] = useState(window.innerHeight / 2);
+    const prevCursorRef = useRef<string | null>(null);
 
-    const setters: Record<keyof Settings, (value: any) => void> = useMemo(
+    type SettingsSetters = {
+        [K in keyof Settings]: (value: Settings[K]) => void;
+    }
+
+    const setters: SettingsSetters = useMemo(
         () => ({
             opacity: setOpacity,
             lineColor: setLineColor,
             lineThickness: setLineThickness,
             cursorType: setCursorType,
             toolbarVisible: setToolbarVisible,
-            toolbarPosition: setToolbarPosition as any,
+            toolbarPosition: setToolbarPosition,
             toggleToolbarKey: setToggleToolbarKey,
             toggleExtensionKey: setToggleExtensionKey,
             linesVisible: setLinesVisible,
@@ -89,25 +94,31 @@ const Ruler: React.FC = () => {
     );
 
     useEffect(() => {
-        chrome.storage.local.get(Object.values(storageKeys), (items) => {
+        chrome.storage.local.get(Object.values(storageKeys), (items: Record<string, unknown>) => {
             (Object.keys(storageKeys) as Array<keyof Settings>).forEach((k) => {
-                const stored = items[storageKeys[k]];
+                const stored = items[storageKeys[k]] as Settings[typeof k] | undefined;
+                const fallback = defaultSettings[k] as Settings[typeof k];
+
                 if (stored !== undefined) {
-                    setters[k](stored as any);
+                    (setters[k] as (value: Settings[keyof Settings]) => void)(
+                        stored as Settings[keyof Settings]
+                    );
                 } else {
-                    setters[k](defaultSettings[k]);
+                    (setters[k] as (value: Settings[keyof Settings]) => void)(
+                        fallback as Settings[keyof Settings]
+                    );
                 }
             });
         });
     }, [setters]);
 
     useEffect(() => {
-        const onMove = (e: MouseEvent) => {
+        const onPointerMove = (e: PointerEvent) => {
             setMouseX(e.clientX);
             setMouseY(e.clientY);
         };
-        document.addEventListener('mousemove', onMove);
-        return () => document.removeEventListener('mousemove', onMove);
+        document.addEventListener('pointermove', onPointerMove);
+        return () => document.removeEventListener('pointermove', onPointerMove);
     }, []);
 
     useEffect(() => {
@@ -124,14 +135,39 @@ const Ruler: React.FC = () => {
     }, [toggleToolbarKey, toggleExtensionKey, toolbarVisible, saveAndSet]);
 
     useEffect(() => {
-        document.body.style.cursor = cursorType;
-    }, [cursorType]);
+        if (prevCursorRef.current === null) {
+            prevCursorRef.current = window.getComputedStyle(document.body).cursor || 'auto';
+        }
+
+        const originalCursor = prevCursorRef.current;
+        document.body.style.cursor = extensionHidden ? originalCursor : cursorType;
+
+        return () => {
+            document.body.style.cursor = originalCursor;
+        };
+    }, [cursorType, extensionHidden]);
+
+    const handleToolbarChange = useCallback((newSettings: Partial<Settings>) => {
+        (Object.keys(newSettings) as (keyof Settings)[]).forEach((key) => {
+            const value = newSettings[key];
+            if (value !== undefined) {
+                saveAndSet(key, value);
+            }
+        });
+    }, [saveAndSet]);
+
+    const handleToolbarReset = useCallback(() => {
+        (Object.keys(defaultSettings) as Array<keyof Settings>).forEach((k) => {
+            saveAndSet(k, defaultSettings[k]);
+        });
+        setClearShapesCounter((c) => c + 1);
+    }, [saveAndSet]);
 
     return (
         <div
             id="ruler"
             className={styles.ruler}
-            style={{display: extensionHidden ? 'none' : 'block'}}
+            style={{display: extensionHidden ? 'none' : 'block', touchAction: 'none'}}
         >
             <div
                 className={styles.overlay}
@@ -176,18 +212,8 @@ const Ruler: React.FC = () => {
                 linesVisible={linesVisible}
                 shapeOpacity={shapeOpacity}
                 shapeColor={shapeColor}
-                onChange={(newSettings) => {
-                    Object.entries(newSettings).forEach(([k, v]) => {
-                        const key = k as keyof Settings;
-                        saveAndSet(key, v as any);
-                    });
-                }}
-                onReset={() => {
-                    (Object.keys(defaultSettings) as Array<keyof Settings>).forEach((k) => {
-                        saveAndSet(k, defaultSettings[k]);
-                    });
-                    setClearShapesCounter((c) => c + 1);
-                }}
+                onChange={handleToolbarChange}
+                onReset={handleToolbarReset}
             />
         </div>
     );

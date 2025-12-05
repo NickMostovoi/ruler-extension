@@ -8,70 +8,94 @@ export interface ToolbarProps extends Settings {
 }
 
 type ControlType = 'range' | 'color' | 'text' | 'select' | 'checkbox';
-
-interface ControlConfig<T = any> {
+type BaseControlConfig<TType extends ControlType, TValue> = {
     settingKey: keyof Settings;
     label: string;
-    type: ControlType;
-    value: T;
-    onChange: (v: T) => void;
+    type: TType;
+    value: TValue;
+    onChange: (v: TValue) => void;
     min?: number;
     max?: number;
     step?: number;
     options?: { value: string; label: string }[];
-}
+};
+type RangeControlConfig = BaseControlConfig<'range', number> & {
+    min: number;
+    max: number;
+    step: number;
+};
+type ColorControlConfig = BaseControlConfig<'color', string>;
+type TextControlConfig = BaseControlConfig<'text', string>;
+type SelectControlConfig = BaseControlConfig<'select', string> & {
+    options: { value: string; label: string }[];
+};
+type CheckboxControlConfig = BaseControlConfig<'checkbox', boolean>;
 
-const ControlItem = <T, >(cfg: ControlConfig<T>) => {
-    const {label, type, value, onChange, min, max, step, options} = cfg;
+type ControlConfig =
+    | RangeControlConfig
+    | ColorControlConfig
+    | TextControlConfig
+    | SelectControlConfig
+    | CheckboxControlConfig;
 
-    let inputElement: ReactNode = null;
+const ControlItem: React.FC<ControlConfig> = (cfg) => {
+    const {label, type} = cfg;
+
+    let inputElement: ReactNode;
 
     switch (type) {
-        case 'range':
+        case 'range': {
+            const {value, min, max, step, onChange} = cfg;
             inputElement = (
                 <input
                     type="range"
                     min={min}
                     max={max}
                     step={step}
-                    value={String(value)}
+                    value={value}
                     className={styles.inputRange}
-                    onChange={e => onChange(parseFloat(e.target.value) as unknown as T)}
+                    onChange={(e) => onChange(parseFloat(e.target.value))}
                 />
             );
             break;
+        }
 
-        case 'color':
+        case 'color': {
+            const {value, onChange} = cfg;
             inputElement = (
                 <input
                     type="color"
-                    value={String(value)}
+                    value={value}
                     className={styles.inputColor}
-                    onChange={e => onChange(e.target.value as unknown as T)}
+                    onChange={(e) => onChange(e.target.value)}
                 />
             );
             break;
+        }
 
-        case 'text':
+        case 'text': {
+            const {value, onChange} = cfg;
             inputElement = (
                 <input
                     type="text"
                     maxLength={1}
-                    value={String(value)}
+                    value={value}
                     className={styles.inputKey}
-                    onChange={e => onChange(e.target.value.toUpperCase() as unknown as T)}
+                    onChange={(e) => onChange(e.target.value.toUpperCase())}
                 />
             );
             break;
+        }
 
-        case 'select':
+        case 'select': {
+            const {value, onChange, options} = cfg;
             inputElement = (
                 <select
-                    value={String(value)}
+                    value={value}
                     className={styles.inputSelect}
-                    onChange={e => onChange(e.target.value as unknown as T)}
+                    onChange={(e) => onChange(e.target.value)}
                 >
-                    {options!.map(opt => (
+                    {options?.map((opt) => (
                         <option key={opt.value} value={opt.value}>
                             {opt.label}
                         </option>
@@ -79,17 +103,20 @@ const ControlItem = <T, >(cfg: ControlConfig<T>) => {
                 </select>
             );
             break;
+        }
 
-        case 'checkbox':
+        case 'checkbox': {
+            const {value, onChange} = cfg;
             inputElement = (
                 <input
                     type="checkbox"
-                    checked={Boolean(value)}
+                    checked={value}
                     className={styles.inputCheckbox}
-                    onChange={e => onChange(e.target.checked as unknown as T)}
+                    onChange={(e) => onChange(e.target.checked)}
                 />
             );
             break;
+        }
 
         default:
             inputElement = null;
@@ -121,6 +148,11 @@ const Toolbar: React.FC<ToolbarProps> = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const headerRef = useRef<HTMLDivElement>(null);
 
+    const isDesktop =
+        typeof window !== 'undefined' &&
+        window.matchMedia &&
+        window.matchMedia('(pointer: fine)').matches;
+
     useEffect(() => {
         const el = containerRef.current;
         const hd = headerRef.current;
@@ -130,17 +162,16 @@ const Toolbar: React.FC<ToolbarProps> = ({
         let offsetX = 0, offsetY = 0;
         let rect: DOMRect;
 
-        const onMouseDown = (e: MouseEvent) => {
+        const onPointerDown = (e: PointerEvent) => {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
             e.preventDefault();
             dragging = true;
             rect = el.getBoundingClientRect();
             offsetX = e.clientX - rect.left;
             offsetY = e.clientY - rect.top;
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
         };
 
-        const onMouseMove = (e: MouseEvent) => {
+        const onPointerMove = (e: PointerEvent) => {
             if (!dragging) return;
             let x = e.clientX - offsetX;
             let y = e.clientY - offsetY;
@@ -150,16 +181,30 @@ const Toolbar: React.FC<ToolbarProps> = ({
             el.style.top = `${y}px`;
         };
 
-        const onMouseUp = () => {
+        const onPointerUp = () => {
             if (!dragging) return;
             dragging = false;
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-            onChange({toolbarPosition: {top: el.style.top, left: el.style.left}});
+
+            onChange({
+                toolbarPosition: {
+                    top: el.style.top,
+                    left: el.style.left,
+                },
+            });
         };
 
-        hd.addEventListener('mousedown', onMouseDown);
-        return () => hd.removeEventListener('mousedown', onMouseDown);
+        hd.addEventListener('pointerdown', onPointerDown);
+
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+        document.addEventListener('pointercancel', onPointerUp);
+
+        return () => {
+            hd.removeEventListener('pointerdown', onPointerDown);
+            document.removeEventListener('pointermove', onPointerMove);
+            document.removeEventListener('pointerup', onPointerUp);
+            document.removeEventListener('pointercancel', onPointerUp);
+        };
     }, [onChange]);
 
     const controls: ControlConfig[] = [
@@ -183,19 +228,21 @@ const Toolbar: React.FC<ToolbarProps> = ({
             value: lineThickness,
             onChange: v => onChange({lineThickness: v})
         },
-        {
-            settingKey: 'cursorType',
-            label: 'Cursor type',
-            type: 'select',
-            options: [
-                {value: 'default', label: 'Default'},
-                {value: 'none', label: 'None'},
-                {value: 'crosshair', label: 'Crosshair'},
-                {value: 'all-scroll', label: 'All-scroll'}
-            ],
-            value: cursorType,
-            onChange: v => onChange({cursorType: v})
-        },
+        ...(isDesktop
+            ? [{
+                settingKey: 'cursorType' as const,
+                label: 'Cursor type',
+                type: 'select' as const,
+                options: [
+                    { value: 'default', label: 'Default' },
+                    { value: 'none', label: 'None' },
+                    { value: 'crosshair', label: 'Crosshair' },
+                    { value: 'all-scroll', label: 'All-scroll' },
+                ],
+                value: cursorType,
+                onChange: (v: string) => onChange({ cursorType: v }),
+            }]
+            : []),
         {
             settingKey: 'toggleToolbarKey',
             label: 'Toggle toolbar key',
@@ -243,8 +290,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
         }
     ];
 
-    const generalControls = controls.slice(0, 7);
-    const shapesControls = controls.slice(7);
+    const generalControls = isDesktop ? controls.slice(0, 7) : controls.slice(0, 6);
+    const shapesControls = isDesktop ? controls.slice(7) : controls.slice(6);
 
     return (
         <div
@@ -287,6 +334,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
                     </div>
                     <div className={styles.notice}>
                         Resize the active shape: ← ↑ → ↓
+                        <br/>
+                        Reverse with Ctrl / Cmd
                     </div>
                 </div>
             </div>

@@ -62,6 +62,14 @@ const ShapeContainer: React.FC<ShapeContainerProps> = ({
     } | null>(null);
     const dragRef = useRef<{ id: string; offsetX: number; offsetY: number } | null>(null);
     const startRef = useRef<{ x: number; y: number } | null>(null);
+    const currentDrawingIdRef = useRef<string | null>(null);
+    const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
+    const lastShapeTapRef = useRef<{
+        time: number;
+        id: string;
+        x: number;
+        y: number;
+    } | null>(null);
 
     useEffect(() => {
         if (clearTrigger !== undefined) {
@@ -70,10 +78,10 @@ const ShapeContainer: React.FC<ShapeContainerProps> = ({
     }, [clearTrigger]);
 
     useEffect(() => {
-        const onMouseMove = (e: MouseEvent) => {
-            if (drawingRef.current && startRef.current) {
+        const onPointerMove = (e: PointerEvent) => {
+            if (drawingRef.current && startRef.current && currentDrawingIdRef.current) {
                 const {x: sx, y: sy} = startRef.current;
-                const currentId = (nextId - 1).toString();
+                const currentId = currentDrawingIdRef.current;
 
                 setShapes((prev) =>
                     prev.map((sh) => {
@@ -136,44 +144,29 @@ const ShapeContainer: React.FC<ShapeContainerProps> = ({
             }
         };
 
-        const onMouseUp = (e: MouseEvent) => {
-            if (drawingRef.current && e.button === 0) {
+        const onPointerUp = () => {
+            if (drawingRef.current) {
                 setShapes((prev) =>
                     prev.filter((sh) => sh.width >= MIN_SIZE && sh.height >= MIN_SIZE)
                 );
             }
             drawingRef.current = false;
+            currentDrawingIdRef.current = null;
             resizeRef.current = null;
             dragRef.current = null;
             startRef.current = null;
         };
 
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+        document.addEventListener('pointercancel', onPointerUp);
 
         return () => {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
+            document.removeEventListener('pointermove', onPointerMove);
+            document.removeEventListener('pointerup', onPointerUp);
+            document.removeEventListener('pointercancel', onPointerUp);
         };
-    }, [nextId]);
-
-    const handleMouseDownOnContainer = useCallback(
-        (e: React.MouseEvent<HTMLDivElement>) => {
-            if (e.button !== 0 || e.target !== containerRef.current) return;
-            const id = nextId.toString();
-            setNextId((num) => num + 1);
-            const sx = e.clientX;
-            const sy = e.clientY;
-            startRef.current = {x: sx, y: sy};
-            drawingRef.current = true;
-
-            setShapes((prev) => [
-                ...prev,
-                {id, x: sx, y: sy, width: 0, height: 0, active: false}
-            ]);
-        },
-        [nextId]
-    );
+    }, []);
 
     const toggleActive = useCallback((id: string) => {
         setShapes((prev) =>
@@ -184,12 +177,67 @@ const ShapeContainer: React.FC<ShapeContainerProps> = ({
         );
     }, []);
 
+    const handlePointerDownOnContainer = useCallback(
+        (e: React.PointerEvent<HTMLDivElement>) => {
+            if (e.target !== containerRef.current) return;
+
+            if (e.pointerType === 'mouse') {
+                if (e.button !== 0) return;
+                const id = nextId.toString();
+                setNextId((num) => num + 1);
+                currentDrawingIdRef.current = id;
+                const sx = e.clientX;
+                const sy = e.clientY;
+                startRef.current = { x: sx, y: sy };
+                drawingRef.current = true;
+
+                setShapes((prev) => [
+                    ...prev,
+                    {id, x: sx, y: sy, width: 0, height: 0, active: false}
+                ]);
+                return;
+            }
+
+            const now = Date.now();
+            const tapX = e.clientX;
+            const tapY = e.clientY;
+            const last = lastTapRef.current;
+            const DOUBLE_TIMEOUT = 300;
+            const DOUBLE_DISTANCE = 30;
+
+            if (
+                last &&
+                now - last.time < DOUBLE_TIMEOUT &&
+                Math.hypot(tapX - last.x, tapY - last.y) < DOUBLE_DISTANCE
+            ) {
+                lastTapRef.current = null;
+
+                const id = nextId.toString();
+                setNextId((num) => num + 1);
+                currentDrawingIdRef.current = id;
+
+                const sx = tapX;
+                const sy = tapY;
+                startRef.current = { x: sx, y: sy };
+                drawingRef.current = true;
+
+                setShapes((prev) => [
+                    ...prev,
+                    {id, x: sx, y: sy, width: 0, height: 0, active: false}
+                ]);
+            } else {
+                lastTapRef.current = { time: now, x: tapX, y: tapY };
+            }
+        },
+        [nextId]
+    );
+
     const removeShape = useCallback((id: string) => {
         setShapes((prev) => prev.filter((sh) => sh.id !== id));
     }, []);
 
-    const handleResizeMouseDown = useCallback(
-        (e: React.MouseEvent<HTMLDivElement>, id: string, dir: Dir) => {
+    const handleResizePointerDown = useCallback(
+        (e: React.PointerEvent<HTMLDivElement>, id: string, dir: Dir) => {
             e.stopPropagation();
             const sh = shapes.find((s) => s.id === id);
             if (!sh) return;
@@ -204,14 +252,38 @@ const ShapeContainer: React.FC<ShapeContainerProps> = ({
         [shapes]
     );
 
-    const handleShapeMouseDown = useCallback(
-        (e: React.MouseEvent<HTMLDivElement>, id: string) => {
+    const handleShapePointerDown = useCallback(
+        (e: React.PointerEvent<HTMLDivElement>, id: string) => {
             e.stopPropagation();
             const sh = shapes.find((s) => s.id === id);
+
             if (!sh) return;
-            dragRef.current = {id, offsetX: e.clientX - sh.x, offsetY: e.clientY - sh.y};
+
+            const now = Date.now();
+            const tapX = e.clientX;
+            const tapY = e.clientY;
+            const last = lastShapeTapRef.current;
+            const DOUBLE_TIMEOUT = 300;
+            const DOUBLE_DISTANCE = 10;
+
+            if (
+                last &&
+                last.id === id &&
+                now - last.time < DOUBLE_TIMEOUT &&
+                Math.hypot(tapX - last.x, tapY - last.y) < DOUBLE_DISTANCE
+            ) {
+                lastShapeTapRef.current = null;
+                toggleActive(id);
+            } else {
+                lastShapeTapRef.current = { time: now, id, x: tapX, y: tapY };
+                dragRef.current = {
+                    id,
+                    offsetX: e.clientX - sh.x,
+                    offsetY: e.clientY - sh.y
+                };
+            }
         },
-        [shapes]
+        [shapes, toggleActive]
     );
 
     useEffect(() => {
@@ -221,25 +293,56 @@ const ShapeContainer: React.FC<ShapeContainerProps> = ({
 
             let {x, y, width, height} = active;
             let updated = false;
+            const step = 1;
 
             switch (e.key) {
                 case 'ArrowUp':
-                    y -= 1;
-                    height += 1;
-                    updated = true;
+                    if (e.ctrlKey || e.metaKey) {
+                        if (height > MIN_SIZE) {
+                            y += step;
+                            height -= step;
+                            updated = true;
+                        }
+                    } else {
+                        y -= step;
+                        height += step;
+                        updated = true;
+                    }
                     break;
                 case 'ArrowDown':
-                    height += 1;
-                    updated = true;
+                    if (e.ctrlKey || e.metaKey) {
+                        if (height > MIN_SIZE) {
+                            height -= step;
+                            updated = true;
+                        }
+                    } else {
+                        height += step;
+                        updated = true;
+                    }
                     break;
                 case 'ArrowLeft':
-                    x -= 1;
-                    width += 1;
-                    updated = true;
+                    if (e.ctrlKey || e.metaKey) {
+                        if (width > MIN_SIZE) {
+                            x += step;
+                            width -= step;
+                            updated = true;
+                        }
+                    } else {
+                        x -= step;
+                        width += step;
+                        updated = true;
+                    }
                     break;
                 case 'ArrowRight':
-                    width += 1;
-                    updated = true;
+                    if (e.ctrlKey || e.metaKey) {
+                        if (width > MIN_SIZE) {
+                            width -= step;
+                            updated = true;
+                        }
+                    } else {
+                        width += step;
+                        updated = true;
+                    }
                     break;
             }
 
@@ -264,7 +367,7 @@ const ShapeContainer: React.FC<ShapeContainerProps> = ({
             id="shape-container"
             className={styles.shapeContainer}
             ref={containerRef}
-            onMouseDown={handleMouseDownOnContainer}
+            onPointerDown={handlePointerDownOnContainer}
         >
             {shapes.map((sh) => {
                 const rgba = hexToRgba(color, opacity);
@@ -282,8 +385,7 @@ const ShapeContainer: React.FC<ShapeContainerProps> = ({
                         id={sh.id}
                         className={`${styles.shape} ${sh.active ? styles.active : ''}`}
                         style={style}
-                        onDoubleClick={() => toggleActive(sh.id)}
-                        onMouseDown={(e) => handleShapeMouseDown(e, sh.id)}
+                        onPointerDown={(e) => handleShapePointerDown(e, sh.id)}
                     >
                         {sh.active && (
                             <>
@@ -291,7 +393,7 @@ const ShapeContainer: React.FC<ShapeContainerProps> = ({
                                     <div
                                         key={dir}
                                         className={`${styles.resizeHandle} ${styles[dir]}`}
-                                        onMouseDown={(e) => handleResizeMouseDown(e, sh.id, dir)}
+                                        onPointerDown={(e) => handleResizePointerDown(e, sh.id, dir)}
                                     />
                                 ))}
                                 <div
