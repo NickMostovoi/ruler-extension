@@ -87,30 +87,64 @@ const Ruler: React.FC = () => {
 
     const saveAndSet = useCallback(
         <K extends keyof Settings>(key: K, value: Settings[K]) => {
-            chrome.storage.local.set({[storageKeys[key]]: value});
+            void chrome.storage.local.set({[storageKeys[key]]: value});
             setters[key](value);
         },
         [setters]
     );
+
+    const getSafePosition = useCallback((pos: { top: string; left: string }) => {
+        const topNum = parseInt(pos.top, 10);
+        const leftNum = parseInt(pos.left, 10);
+
+        const TOOLBAR_WIDTH = 360;
+        const TOOLBAR_HEIGHT = 57;
+        const PADDING = 10;
+
+        const safeTop = Math.max(PADDING, Math.min(topNum, window.innerHeight - TOOLBAR_HEIGHT - PADDING));
+        const safeLeft = Math.max(PADDING, Math.min(leftNum, window.innerWidth - TOOLBAR_WIDTH - PADDING));
+
+        return {
+            top: `${safeTop}px`,
+            left: `${safeLeft}px`,
+        };
+    }, []);
 
     useEffect(() => {
         chrome.storage.local.get(Object.values(storageKeys), (items: Record<string, unknown>) => {
             (Object.keys(storageKeys) as Array<keyof Settings>).forEach((k) => {
                 const stored = items[storageKeys[k]] as Settings[typeof k] | undefined;
                 const fallback = defaultSettings[k] as Settings[typeof k];
+                const value = stored ?? fallback;
 
-                if (stored !== undefined) {
+                if (k === 'toolbarPosition') {
+                    setters.toolbarPosition(getSafePosition(value as Settings["toolbarPosition"]));
+                } else if (setters[k]) {
                     (setters[k] as (value: Settings[keyof Settings]) => void)(
-                        stored as Settings[keyof Settings]
-                    );
-                } else {
-                    (setters[k] as (value: Settings[keyof Settings]) => void)(
-                        fallback as Settings[keyof Settings]
+                        value as Settings[keyof Settings]
                     );
                 }
             });
         });
-    }, [setters]);
+    }, [getSafePosition, setters]);
+
+    useEffect(() => {
+        let resizeTimer: number;
+
+        const handleResize = () => {
+            window.clearTimeout(resizeTimer);
+            resizeTimer = window.setTimeout(() => {
+                const safePos = getSafePosition(toolbarPosition);
+
+                if (safePos.top !== toolbarPosition.top || safePos.left !== toolbarPosition.left) {
+                    saveAndSet("toolbarPosition", safePos);
+                }
+            }, 150);
+        };
+
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, [toolbarPosition, saveAndSet, getSafePosition]);
 
     useEffect(() => {
         const onPointerMove = (e: PointerEvent) => {

@@ -9,6 +9,8 @@
     z-index: vars.$z-shapes;
     pointer-events: auto;
     cursor: inherit;
+    touch-action: none;
+    user-select: none;
 }
 
 .shape {
