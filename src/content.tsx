@@ -2,7 +2,7 @@ import {createRoot, Root} from 'react-dom/client';
 import Ruler from './components/Ruler/Ruler';
 import './styles/globals.scss';
 
-const ROOT_ID = 'ruler-root';
+const ROOT_ID = 'ext-ruler-root-mm';
 
 let root: Root | null = null;
 
@@ -38,4 +38,8 @@ chrome.runtime.onMessage.addListener((message: { command: string }) => {
             mount();
         }
     }
+
+    return true;
 });
+
+mount();

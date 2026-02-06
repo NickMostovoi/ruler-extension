@@ -199,7 +199,7 @@ const Ruler: React.FC = () => {
 
     return (
         <div
-            id="ruler"
+            id="ext-ruler-mm"
             className={styles.ruler}
             style={{display: extensionHidden ? 'none' : 'block', touchAction: 'none'}}
         >
