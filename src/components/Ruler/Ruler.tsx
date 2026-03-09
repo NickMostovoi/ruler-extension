@@ -19,7 +19,7 @@ export interface Settings {
 
 const defaultSettings: Settings = {
     opacity: 0.1,
-    lineColor: '#ff0000',
+    lineColor: '#daa520',
     lineThickness: 1,
     cursorType: 'default',
     toolbarVisible: true,
@@ -28,7 +28,7 @@ const defaultSettings: Settings = {
     toggleExtensionKey: 'Z',
     linesVisible: true,
     shapeOpacity: 0.5,
-    shapeColor: '#00ff00',
+    shapeColor: '#000000',
 };
 
 const storageKeys: Record<keyof Settings, string> = {
@@ -60,13 +60,18 @@ const Ruler: React.FC = () => {
 
     const [clearShapesCounter, setClearShapesCounter] = useState(0);
     const [extensionHidden, setExtensionHidden] = useState(false);
+    const [isReady, setIsReady] = useState(false);
 
     const rulerRef = useRef<HTMLDivElement>(null);
     const prevCursorRef = useRef<string | null>(null);
+    const toolbarPositionRef = useRef(defaultSettings.toolbarPosition);
+    const resizeTimerRef = useRef<number | null>(null);
+    const rafRef = useRef<number | null>(null);
+    const mousePositionRef = useRef({x: 0, y: 0});
 
     type SettingsSetters = {
         [K in keyof Settings]: (value: Settings[K]) => void;
-    }
+    };
 
     const setters: SettingsSetters = useMemo(
         () => ({
@@ -111,6 +116,10 @@ const Ruler: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        toolbarPositionRef.current = toolbarPosition;
+    }, [toolbarPosition]);
+
+    useEffect(() => {
         chrome.storage.local.get(Object.values(storageKeys), (items: Record<string, unknown>) => {
             (Object.keys(storageKeys) as Array<keyof Settings>).forEach((k) => {
                 const stored = items[storageKeys[k]] as Settings[typeof k] | undefined;
@@ -125,52 +134,92 @@ const Ruler: React.FC = () => {
                     );
                 }
             });
+
+            setIsReady(true);
         });
     }, [getSafePosition, setters]);
 
     useEffect(() => {
-        let resizeTimer: number;
+        if (!isReady) return;
 
         const handleResize = () => {
-            window.clearTimeout(resizeTimer);
-            resizeTimer = window.setTimeout(() => {
-                const safePos = getSafePosition(toolbarPosition);
+            if (resizeTimerRef.current !== null) {
+                window.clearTimeout(resizeTimerRef.current);
+            }
 
-                if (safePos.top !== toolbarPosition.top || safePos.left !== toolbarPosition.left) {
+            resizeTimerRef.current = window.setTimeout(() => {
+                const currentPosition = toolbarPositionRef.current;
+                const safePos = getSafePosition(currentPosition);
+
+                if (safePos.top !== currentPosition.top || safePos.left !== currentPosition.left) {
                     saveAndSet("toolbarPosition", safePos);
                 }
             }, 150);
         };
 
         window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, [toolbarPosition, saveAndSet, getSafePosition]);
 
-    useEffect(() => {
-        const onPointerMove = (e: PointerEvent) => {
-            if (rulerRef.current) {
-                rulerRef.current.style.setProperty('--mouse-x', `${e.clientX}px`);
-                rulerRef.current.style.setProperty('--mouse-y', `${e.clientY}px`);
+        return () => {
+            window.removeEventListener("resize", handleResize);
+
+            if (resizeTimerRef.current !== null) {
+                window.clearTimeout(resizeTimerRef.current);
             }
         };
-        document.addEventListener('pointermove', onPointerMove);
-        return () => document.removeEventListener('pointermove', onPointerMove);
-    }, []);
+    }, [isReady, saveAndSet, getSafePosition]);
 
     useEffect(() => {
+        if (!isReady) return;
+
+        const updateMousePosition = () => {
+            rafRef.current = null;
+
+            if (rulerRef.current) {
+                rulerRef.current.style.setProperty('--mouse-x', `${mousePositionRef.current.x}px`);
+                rulerRef.current.style.setProperty('--mouse-y', `${mousePositionRef.current.y}px`);
+            }
+        };
+
+        const onPointerMove = (e: PointerEvent) => {
+            mousePositionRef.current = {x: e.clientX, y: e.clientY};
+
+            if (rafRef.current === null) {
+                rafRef.current = window.requestAnimationFrame(updateMousePosition);
+            }
+        };
+
+        document.addEventListener('pointermove', onPointerMove);
+
+        return () => {
+            document.removeEventListener('pointermove', onPointerMove);
+
+            if (rafRef.current !== null) {
+                window.cancelAnimationFrame(rafRef.current);
+                rafRef.current = null;
+            }
+        };
+    }, [isReady]);
+
+    useEffect(() => {
+        if (!isReady) return;
+
         const onKey = (e: KeyboardEvent) => {
             const key = e.key.toUpperCase();
+
             if (key === toggleToolbarKey) {
                 saveAndSet('toolbarVisible', !toolbarVisible);
             } else if (key === toggleExtensionKey) {
                 setExtensionHidden((prev) => !prev);
             }
         };
+
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
-    }, [toggleToolbarKey, toggleExtensionKey, toolbarVisible, saveAndSet]);
+    }, [isReady, toggleToolbarKey, toggleExtensionKey, toolbarVisible, saveAndSet]);
 
     useEffect(() => {
+        if (!isReady) return;
+
         if (prevCursorRef.current === null) {
             prevCursorRef.current = window.getComputedStyle(document.body).cursor || 'auto';
         }
@@ -181,7 +230,7 @@ const Ruler: React.FC = () => {
         return () => {
             document.body.style.cursor = originalCursor;
         };
-    }, [cursorType, extensionHidden]);
+    }, [isReady, cursorType, extensionHidden]);
 
     const handleToolbarChange = useCallback((newSettings: Partial<Settings>) => {
         (Object.keys(newSettings) as (keyof Settings)[]).forEach((key) => {
@@ -196,8 +245,13 @@ const Ruler: React.FC = () => {
         (Object.keys(defaultSettings) as Array<keyof Settings>).forEach((k) => {
             saveAndSet(k, defaultSettings[k]);
         });
+
         setClearShapesCounter((c) => c + 1);
     }, [saveAndSet]);
+
+    if (!isReady) {
+        return null;
+    }
 
     return (
         <div
@@ -219,7 +273,7 @@ const Ruler: React.FC = () => {
             <div
                 className={styles.horizontal}
                 style={{
-                    top: `var(--mouse-y)`,
+                    top: 'var(--mouse-y)',
                     backgroundColor: lineColor,
                     height: `${lineThickness}px`,
                     display: linesVisible ? 'block' : 'none',
@@ -229,7 +283,7 @@ const Ruler: React.FC = () => {
             <div
                 className={styles.vertical}
                 style={{
-                    left: `var(--mouse-x)`,
+                    left: 'var(--mouse-x)',
                     backgroundColor: lineColor,
                     width: `${lineThickness}px`,
                     display: linesVisible ? 'block' : 'none',

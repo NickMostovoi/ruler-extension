@@ -220,10 +220,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
         },
         {
             settingKey: 'lineThickness',
-            label: 'Line thickness',
+            label: `Line thickness ${lineThickness}px`,
             type: 'range',
             min: 1,
-            max: 5,
+            max: 10,
             step: 1,
             value: lineThickness,
             onChange: v => onChange({lineThickness: v})
@@ -347,4 +347,4 @@ const Toolbar: React.FC<ToolbarProps> = ({
     );
 };
 
-export default Toolbar;
+export default React.memo(Toolbar);

@@ -414,4 +414,4 @@ const ShapeContainer: React.FC<ShapeContainerProps> = ({
     );
 };
 
-export default ShapeContainer;
+export default React.memo(ShapeContainer);

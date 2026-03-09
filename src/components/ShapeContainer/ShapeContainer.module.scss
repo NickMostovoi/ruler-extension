@@ -18,6 +18,10 @@
     user-select: none;
     pointer-events: auto;
     cursor: grab;
+
+    &:hover {
+        box-shadow: 0 0 0 1px vars.$shape-hover-shadow;
+    }
 }
 
 .shape.active {
