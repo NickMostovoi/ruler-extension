@@ -36,5 +36,13 @@
             },
             "description": "Toggle Ruler Tool Visibility"
         }
-    }
+    },
+    "web_accessible_resources": [{
+        "resources": [
+            "fonts/*.woff2"
+        ],
+        "matches": [
+            "<all_urls>"
+        ]
+    }]
 }

@@ -60,8 +60,8 @@ const Ruler: React.FC = () => {
 
     const [clearShapesCounter, setClearShapesCounter] = useState(0);
     const [extensionHidden, setExtensionHidden] = useState(false);
-    const [mouseX, setMouseX] = useState(window.innerWidth / 2);
-    const [mouseY, setMouseY] = useState(window.innerHeight / 2);
+
+    const rulerRef = useRef<HTMLDivElement>(null);
     const prevCursorRef = useRef<string | null>(null);
 
     type SettingsSetters = {
@@ -148,8 +148,10 @@ const Ruler: React.FC = () => {
 
     useEffect(() => {
         const onPointerMove = (e: PointerEvent) => {
-            setMouseX(e.clientX);
-            setMouseY(e.clientY);
+            if (rulerRef.current) {
+                rulerRef.current.style.setProperty('--mouse-x', `${e.clientX}px`);
+                rulerRef.current.style.setProperty('--mouse-y', `${e.clientY}px`);
+            }
         };
         document.addEventListener('pointermove', onPointerMove);
         return () => document.removeEventListener('pointermove', onPointerMove);
@@ -200,8 +202,14 @@ const Ruler: React.FC = () => {
     return (
         <div
             id="ext-ruler-mm"
+            ref={rulerRef}
             className={styles.ruler}
-            style={{display: extensionHidden ? 'none' : 'block', touchAction: 'none'}}
+            style={{
+                display: extensionHidden ? 'none' : 'block',
+                touchAction: 'none',
+                '--mouse-x': '50vw',
+                '--mouse-y': '50vh'
+            } as React.CSSProperties}
         >
             <div
                 className={styles.overlay}
@@ -211,7 +219,7 @@ const Ruler: React.FC = () => {
             <div
                 className={styles.horizontal}
                 style={{
-                    top: `${mouseY}px`,
+                    top: `var(--mouse-y)`,
                     backgroundColor: lineColor,
                     height: `${lineThickness}px`,
                     display: linesVisible ? 'block' : 'none',
@@ -221,7 +229,7 @@ const Ruler: React.FC = () => {
             <div
                 className={styles.vertical}
                 style={{
-                    left: `${mouseX}px`,
+                    left: `var(--mouse-x)`,
                     backgroundColor: lineColor,
                     width: `${lineThickness}px`,
                     display: linesVisible ? 'block' : 'none',

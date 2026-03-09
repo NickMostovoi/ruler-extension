@@ -40,9 +40,11 @@
 .horizontal {
     left: 0;
     width: 100%;
+    will-change: top;
 }
 
 .vertical {
     top: 0;
     height: 100%;
+    will-change: left;
 }
