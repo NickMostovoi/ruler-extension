@@ -1,348 +1,521 @@
-import React, {useRef, useEffect, ReactNode} from 'react';
-import styles from './Toolbar.module.scss';
-import {Settings} from '../Ruler/Ruler';
+import React, {useEffect, useRef, useState} from 'react';
+import styles from './toolbar.module.scss';
 
-export interface ToolbarProps extends Settings {
-    onChange: (s: Partial<Settings>) => void;
+import {
+    RulerSettings,
+    ToolbarPosition,
+} from '../../ruler-core/ruler.types';
+
+import {getResponsiveToolbarWidth} from '../ruler/ruler.helpers';
+
+import {
+    ToolbarHelpPopoverType,
+    TOOLBAR_CLICK_MAX_DISTANCE,
+    TOOLBAR_CLICK_MAX_DURATION,
+    TOOLBAR_DRAG_THRESHOLD,
+} from './toolbar.helpers';
+
+import {
+    buildToolbarControls,
+    ControlItem,
+    splitToolbarControls,
+} from './toolbar.controls';
+
+export interface ToolbarProps extends RulerSettings {
+    isToolbarHiddenToSide: boolean;
+    onChange: (settings: Partial<RulerSettings>) => void;
     onReset: () => void;
+    onResetPosition: () => void;
+    onClearShapes: () => void;
+    onToggleToolbarHiddenToSide: () => void;
 }
 
-type ControlType = 'range' | 'color' | 'text' | 'select' | 'checkbox';
-type BaseControlConfig<TType extends ControlType, TValue> = {
-    settingKey: keyof Settings;
-    label: string;
-    type: TType;
-    value: TValue;
-    onChange: (v: TValue) => void;
-    min?: number;
-    max?: number;
-    step?: number;
-    options?: { value: string; label: string }[];
-};
-type RangeControlConfig = BaseControlConfig<'range', number> & {
-    min: number;
-    max: number;
-    step: number;
-};
-type ColorControlConfig = BaseControlConfig<'color', string>;
-type TextControlConfig = BaseControlConfig<'text', string>;
-type SelectControlConfig = BaseControlConfig<'select', string> & {
-    options: { value: string; label: string }[];
-};
-type CheckboxControlConfig = BaseControlConfig<'checkbox', boolean>;
-
-type ControlConfig =
-    | RangeControlConfig
-    | ColorControlConfig
-    | TextControlConfig
-    | SelectControlConfig
-    | CheckboxControlConfig;
-
-const ControlItem: React.FC<ControlConfig> = (cfg) => {
-    const {label, type} = cfg;
-
-    let inputElement: ReactNode;
-
-    switch (type) {
-        case 'range': {
-            const {value, min, max, step, onChange} = cfg;
-            inputElement = (
-                <input
-                    type="range"
-                    min={min}
-                    max={max}
-                    step={step}
-                    value={value}
-                    className={styles.inputRange}
-                    onChange={(e) => onChange(parseFloat(e.target.value))}
-                />
-            );
-            break;
-        }
-
-        case 'color': {
-            const {value, onChange} = cfg;
-            inputElement = (
-                <input
-                    type="color"
-                    value={value}
-                    className={styles.inputColor}
-                    onChange={(e) => onChange(e.target.value)}
-                />
-            );
-            break;
-        }
-
-        case 'text': {
-            const {value, onChange} = cfg;
-            inputElement = (
-                <input
-                    type="text"
-                    maxLength={1}
-                    value={value}
-                    className={styles.inputKey}
-                    onChange={(e) => onChange(e.target.value.toUpperCase())}
-                />
-            );
-            break;
-        }
-
-        case 'select': {
-            const {value, onChange, options} = cfg;
-            inputElement = (
-                <select
-                    value={value}
-                    className={styles.inputSelect}
-                    onChange={(e) => onChange(e.target.value)}
-                >
-                    {options?.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                        </option>
-                    ))}
-                </select>
-            );
-            break;
-        }
-
-        case 'checkbox': {
-            const {value, onChange} = cfg;
-            inputElement = (
-                <input
-                    type="checkbox"
-                    checked={value}
-                    className={styles.inputCheckbox}
-                    onChange={(e) => onChange(e.target.checked)}
-                />
-            );
-            break;
-        }
-
-        default:
-            inputElement = null;
-    }
-
-    return (
-        <div className={styles.controlsGroup}>
-            <label className={styles.label}>{label}</label>
-            {inputElement}
-        </div>
-    );
-};
-
 const Toolbar: React.FC<ToolbarProps> = ({
-        opacity,
+    overlayOpacity,
+    lineColor,
+    lineThickness,
+    cursorType,
+    toolbarExpanded,
+    toolbarPosition,
+    toggleHideToSideKey,
+    linesVisible,
+    shapeFillOpacity,
+    shapeFillColor,
+    attachNewShapesToPage,
+    isToolbarHiddenToSide,
+    onChange,
+    onReset,
+    onResetPosition,
+    onClearShapes,
+    onToggleToolbarHiddenToSide,
+}) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const headerRef = useRef<HTMLDivElement>(null);
+    const hiddenHandleRef = useRef<HTMLDivElement>(null);
+    const generalHelpRef = useRef<HTMLDivElement>(null);
+    const shapeHelpRef = useRef<HTMLDivElement>(null);
+
+    const [isDesktop, setIsDesktop] = useState(false);
+    const [activePopover, setActivePopover] = useState<ToolbarHelpPopoverType>(null);
+
+    const settings: RulerSettings = {
+        overlayOpacity,
         lineColor,
         lineThickness,
         cursorType,
-        toolbarVisible,
+        toolbarExpanded,
         toolbarPosition,
-        toggleToolbarKey,
-        toggleExtensionKey,
+        toggleHideToSideKey,
         linesVisible,
-        shapeOpacity,
-        shapeColor,
-        onChange,
-        onReset
-    }) => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const headerRef = useRef<HTMLDivElement>(null);
+        shapeFillOpacity,
+        shapeFillColor,
+        attachNewShapesToPage,
+    };
 
-    const isDesktop =
-        typeof window !== 'undefined' &&
-        window.matchMedia &&
-        window.matchMedia('(pointer: fine)').matches;
+    const icons = {
+        hideLines: chrome.runtime.getURL('images/hideLines.png'),
+        showLines: chrome.runtime.getURL('images/showLines.png'),
+        clearShapes: chrome.runtime.getURL('images/clearShapes.png'),
+        settings: chrome.runtime.getURL('images/settings.png'),
+        arrow: chrome.runtime.getURL('images/arrow.png'),
+        resetArrow: chrome.runtime.getURL('images/resetArrow.png'),
+    };
 
     useEffect(() => {
-        const el = containerRef.current;
-        const hd = headerRef.current;
-        if (!el || !hd) return;
+        if (typeof window === 'undefined' || !window.matchMedia) {
+            return;
+        }
 
-        let dragging = false;
-        let offsetX = 0, offsetY = 0;
-        let rect: DOMRect;
+        const media = window.matchMedia('(pointer: fine)');
+        const updateMatch = () => setIsDesktop(media.matches);
 
-        const onPointerDown = (e: PointerEvent) => {
-            if (e.pointerType === 'mouse' && e.button !== 0) return;
-            e.preventDefault();
-            dragging = true;
-            rect = el.getBoundingClientRect();
-            offsetX = e.clientX - rect.left;
-            offsetY = e.clientY - rect.top;
-        };
+        updateMatch();
 
-        const onPointerMove = (e: PointerEvent) => {
-            if (!dragging) return;
-            let x = e.clientX - offsetX;
-            let y = e.clientY - offsetY;
-            x = Math.max(0, Math.min(x, window.innerWidth - rect.width));
-            y = Math.max(0, Math.min(y, window.innerHeight - rect.height));
-            el.style.left = `${x}px`;
-            el.style.top = `${y}px`;
-        };
+        if (typeof media.addEventListener === 'function') {
+            media.addEventListener('change', updateMatch);
 
-        const onPointerUp = () => {
-            if (!dragging) return;
-            dragging = false;
+            return () => {
+                media.removeEventListener('change', updateMatch);
+            };
+        }
 
-            onChange({
-                toolbarPosition: {
-                    top: el.style.top,
-                    left: el.style.left,
-                },
-            });
-        };
-
-        hd.addEventListener('pointerdown', onPointerDown);
-
-        document.addEventListener('pointermove', onPointerMove);
-        document.addEventListener('pointerup', onPointerUp);
-        document.addEventListener('pointercancel', onPointerUp);
+        media.addListener(updateMatch);
 
         return () => {
-            hd.removeEventListener('pointerdown', onPointerDown);
-            document.removeEventListener('pointermove', onPointerMove);
-            document.removeEventListener('pointerup', onPointerUp);
-            document.removeEventListener('pointercancel', onPointerUp);
+            media.removeListener(updateMatch);
         };
-    }, [onChange]);
+    }, []);
 
-    const controls: ControlConfig[] = [
-        {
-            settingKey: 'opacity',
-            label: 'Overlay opacity',
-            type: 'range',
-            min: 0,
-            max: 0.8,
-            step: 0.05,
-            value: opacity,
-            onChange: v => onChange({opacity: v})
-        },
-        {
-            settingKey: 'lineThickness',
-            label: `Line thickness ${lineThickness}px`,
-            type: 'range',
-            min: 1,
-            max: 10,
-            step: 1,
-            value: lineThickness,
-            onChange: v => onChange({lineThickness: v})
-        },
-        ...(isDesktop
-            ? [{
-                settingKey: 'cursorType' as const,
-                label: 'Cursor type',
-                type: 'select' as const,
-                options: [
-                    { value: 'default', label: 'Default' },
-                    { value: 'none', label: 'None' },
-                    { value: 'crosshair', label: 'Crosshair' },
-                    { value: 'all-scroll', label: 'All-scroll' },
-                ],
-                value: cursorType,
-                onChange: (v: string) => onChange({ cursorType: v }),
-            }]
-            : []),
-        {
-            settingKey: 'toggleToolbarKey',
-            label: 'Toggle toolbar key',
-            type: 'text',
-            value: toggleToolbarKey,
-            onChange: v => onChange({toggleToolbarKey: v})
-        },
-        {
-            settingKey: 'lineColor',
-            label: 'Line color',
-            type: 'color',
-            value: lineColor,
-            onChange: v => onChange({lineColor: v})
-        },
-        {
-            settingKey: 'toggleExtensionKey',
-            label: 'Toggle extension key',
-            type: 'text',
-            value: toggleExtensionKey,
-            onChange: v => onChange({toggleExtensionKey: v})
-        },
-        {
-            settingKey: 'linesVisible',
-            label: 'Hide lines',
-            type: 'checkbox',
-            value: !linesVisible,
-            onChange: v => onChange({linesVisible: !v})
-        },
-        {
-            settingKey: 'shapeOpacity',
-            label: 'Shape opacity',
-            type: 'range',
-            min: 0.1,
-            max: 1,
-            step: 0.05,
-            value: shapeOpacity,
-            onChange: v => onChange({shapeOpacity: v})
-        },
-        {
-            settingKey: 'shapeColor',
-            label: 'Shape color',
-            type: 'color',
-            value: shapeColor,
-            onChange: v => onChange({shapeColor: v})
+    useEffect(() => {
+        if (isToolbarHiddenToSide || !toolbarExpanded) {
+            setActivePopover(null);
         }
-    ];
+    }, [isToolbarHiddenToSide, toolbarExpanded]);
 
-    const generalControls = isDesktop ? controls.slice(0, 7) : controls.slice(0, 6);
-    const shapesControls = isDesktop ? controls.slice(7) : controls.slice(6);
+    useEffect(() => {
+        if (!activePopover) {
+            return;
+        }
+
+        const activePopoverRef =
+            activePopover === 'general' ? generalHelpRef : shapeHelpRef;
+
+        const handlePointerDown = (event: PointerEvent) => {
+            if (activePopoverRef.current?.contains(event.target as Node)) {
+                return;
+            }
+
+            setActivePopover(null);
+        };
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setActivePopover(null);
+            }
+        };
+
+        document.addEventListener('pointerdown', handlePointerDown);
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('pointerdown', handlePointerDown);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [activePopover]);
+
+    useEffect(() => {
+        const container = containerRef.current;
+        const dragHandle = isToolbarHiddenToSide
+            ? hiddenHandleRef.current
+            : headerRef.current;
+
+        if (!container || !dragHandle) {
+            return;
+        }
+
+        let pointerId: number | null = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        let startClientX = 0;
+        let startClientY = 0;
+        let startTime = 0;
+        let isDragging = false;
+        let originalUserSelect = '';
+
+        const finishDrag = (): {wasDragging: boolean} => {
+            if (pointerId === null) {
+                return {wasDragging: false};
+            }
+
+            const wasDragging = isDragging;
+
+            pointerId = null;
+            document.body.style.userSelect = originalUserSelect;
+
+            if (wasDragging) {
+                isDragging = false;
+
+                const nextPosition: ToolbarPosition = isToolbarHiddenToSide
+                    ? {
+                        top: container.style.top || toolbarPosition.top,
+                        left: toolbarPosition.left,
+                    }
+                    : {
+                        top: container.style.top || toolbarPosition.top,
+                        left: container.style.left || toolbarPosition.left,
+                    };
+
+                onChange({toolbarPosition: nextPosition});
+            }
+
+            return {wasDragging};
+        };
+
+        const handlePointerDown = (event: PointerEvent) => {
+            if (event.pointerType === 'mouse' && event.button !== 0) {
+                return;
+            }
+
+            if (
+                !isToolbarHiddenToSide &&
+                event.target instanceof HTMLElement &&
+                event.target.closest('button, input, select, label, [data-no-drag="true"]')
+            ) {
+                return;
+            }
+
+            const rect = container.getBoundingClientRect();
+
+            pointerId = event.pointerId;
+            dragOffsetX = event.clientX - rect.left;
+            dragOffsetY = event.clientY - rect.top;
+            startClientX = event.clientX;
+            startClientY = event.clientY;
+            startTime = Date.now();
+            isDragging = false;
+            originalUserSelect = document.body.style.userSelect;
+        };
+
+        const handlePointerMove = (event: PointerEvent) => {
+            if (pointerId !== event.pointerId) {
+                return;
+            }
+
+            const movedEnough =
+                Math.hypot(
+                    event.clientX - startClientX,
+                    event.clientY - startClientY
+                ) >= TOOLBAR_DRAG_THRESHOLD;
+
+            if (!isDragging && !movedEnough) {
+                return;
+            }
+
+            if (!isDragging) {
+                isDragging = true;
+                document.body.style.userSelect = 'none';
+            }
+
+            event.preventDefault();
+
+            const rect = container.getBoundingClientRect();
+            const maxTop = Math.max(0, window.innerHeight - rect.height);
+
+            let nextTop = event.clientY - dragOffsetY;
+            nextTop = Math.max(0, Math.min(nextTop, maxTop));
+            container.style.top = `${nextTop}px`;
+
+            if (isToolbarHiddenToSide) {
+                container.style.right = '0px';
+                container.style.left = 'auto';
+                return;
+            }
+
+            const maxLeft = Math.max(0, window.innerWidth - rect.width);
+
+            let nextLeft = event.clientX - dragOffsetX;
+            nextLeft = Math.max(0, Math.min(nextLeft, maxLeft));
+            container.style.left = `${nextLeft}px`;
+        };
+
+        const handlePointerUp = (event: PointerEvent) => {
+            if (pointerId !== event.pointerId) {
+                return;
+            }
+
+            const clickDuration = Date.now() - startTime;
+            const clickDistance = Math.hypot(
+                event.clientX - startClientX,
+                event.clientY - startClientY
+            );
+
+            const {wasDragging} = finishDrag();
+
+            if (
+                isToolbarHiddenToSide &&
+                !wasDragging &&
+                clickDuration <= TOOLBAR_CLICK_MAX_DURATION &&
+                clickDistance <= TOOLBAR_CLICK_MAX_DISTANCE
+            ) {
+                onToggleToolbarHiddenToSide();
+            }
+        };
+
+        const handlePointerCancel = (event: PointerEvent) => {
+            if (pointerId !== event.pointerId) {
+                return;
+            }
+
+            finishDrag();
+        };
+
+        dragHandle.addEventListener('pointerdown', handlePointerDown);
+        document.addEventListener('pointermove', handlePointerMove);
+        document.addEventListener('pointerup', handlePointerUp);
+        document.addEventListener('pointercancel', handlePointerCancel);
+
+        return () => {
+            dragHandle.removeEventListener('pointerdown', handlePointerDown);
+            document.removeEventListener('pointermove', handlePointerMove);
+            document.removeEventListener('pointerup', handlePointerUp);
+            document.removeEventListener('pointercancel', handlePointerCancel);
+            document.body.style.userSelect = originalUserSelect;
+        };
+    }, [
+        isToolbarHiddenToSide,
+        onChange,
+        onToggleToolbarHiddenToSide,
+        toolbarPosition.left,
+        toolbarPosition.top,
+    ]);
+
+    const controls = buildToolbarControls({
+        settings,
+        isDesktop,
+        onChange,
+    });
+
+    const {generalControls, shapeControls} = splitToolbarControls(controls);
+
+    const resolvedLeft = toolbarPosition.left === '50%'
+        ? `${Math.max(10, Math.round(window.innerWidth / 2 - getResponsiveToolbarWidth() / 2))}px`
+        : toolbarPosition.left;
+
+    if (isToolbarHiddenToSide) {
+        return (
+            <div
+                ref={containerRef}
+                className={`${styles.toolbar} ${styles.toolbarHiddenUi}`}
+                style={{
+                    top: toolbarPosition.top,
+                    right: '0px',
+                    left: 'auto',
+                }}
+            >
+                <div
+                    ref={hiddenHandleRef}
+                    className={styles.hiddenHandle}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Show toolbar"
+                    title="Show toolbar"
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            onToggleToolbarHiddenToSide();
+                        }
+                    }}
+                >
+                    <span className={styles.hiddenArrow} aria-hidden="true">
+                        ‹
+                    </span>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div
             ref={containerRef}
-            className={`${styles.toolbar} ${!toolbarVisible ? styles.toolbarCollapsed : ''}`}
-            style={toolbarPosition}
+            className={styles.toolbar}
+            style={{
+                top: toolbarPosition.top,
+                left: resolvedLeft,
+            }}
         >
-            <div className={styles.header} ref={headerRef}>
-                <span className={styles.title}>Ruler Settings</span>
-                <button
-                    className={styles.toggle}
-                    onClick={() => onChange({toolbarVisible: !toolbarVisible})}
+            {toolbarExpanded && (
+                <div
+                    className={`${styles.panel} ${styles.panelVisible}`}
+                    aria-hidden={!toolbarExpanded}
                 >
-                    {toolbarVisible ? '▲' : '▼'}
-                </button>
-            </div>
+                    <div className={styles.content}>
+                        <div className={styles.section}>
+                            <div className={styles.sectionTitleRow}>
+                                <div className={styles.sectionTitle}>General</div>
 
-            <div className={styles.content}>
-                <div className={styles.section}>
-                    <div className={styles.sectionTitle}>General</div>
-                    <div className={styles.controlsContainer}>
-                        {generalControls.map((cfg) => (
-                            <ControlItem
-                                key={String(cfg.settingKey)}
-                                {...cfg}
-                            />
-                        ))}
+                                <div ref={generalHelpRef} className={styles.popoverWrap}>
+                                    <button
+                                        type="button"
+                                        className={`${styles.infoButton} ${activePopover === 'general' ? styles.infoButtonActive : ''}`}
+                                        onClick={() => {
+                                            setActivePopover((previous) =>
+                                                previous === 'general' ? null : 'general'
+                                            );
+                                        }}
+                                        title="Extension shortcuts"
+                                        aria-label="Extension shortcuts"
+                                        aria-expanded={activePopover === 'general'}
+                                    >
+                                        i
+                                    </button>
+
+                                    {activePopover === 'general' && (
+                                        <div className={styles.floatingPopover}>
+                                            <div><strong>Show / hide extension</strong></div>
+                                            <div>Ctrl + Shift + Y on Windows / Linux</div>
+                                            <div>Cmd + Shift + Y on Mac</div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className={styles.controlsContainer}>
+                                {generalControls.map((control) => (
+                                    <ControlItem
+                                        key={String(control.settingKey)}
+                                        config={control}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className={styles.section}>
+                            <div className={styles.sectionTitleRow}>
+                                <div className={styles.sectionTitle}>Shapes</div>
+
+                                <div ref={shapeHelpRef} className={styles.popoverWrap}>
+                                    <button
+                                        type="button"
+                                        className={`${styles.infoButton} ${activePopover === 'shape' ? styles.infoButtonActive : ''}`}
+                                        onClick={() => {
+                                            setActivePopover((previous) =>
+                                                previous === 'shape' ? null : 'shape'
+                                            );
+                                        }}
+                                        title="Shape keyboard help"
+                                        aria-label="Shape keyboard help"
+                                        aria-expanded={activePopover === 'shape'}
+                                    >
+                                        i
+                                    </button>
+
+                                    {activePopover === 'shape' && (
+                                        <div className={styles.floatingPopover}>
+                                            <div><strong>Arrow</strong> = resize by 1px</div>
+                                            <div><strong>Shift + Arrow</strong> = resize by 10px</div>
+                                            <div><strong>Ctrl / Cmd + Arrow</strong> = reverse resize</div>
+                                            <div><strong>Shift + drag corner</strong> = lock proportions</div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className={styles.controlsContainer}>
+                                {shapeControls.map((control) => (
+                                    <ControlItem
+                                        key={String(control.settingKey)}
+                                        config={control}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        <button
+                            className={`${styles.button} ${styles.reset}`}
+                            onClick={onReset}
+                            type="button"
+                        >
+                            Reset settings
+                        </button>
                     </div>
                 </div>
+            )}
 
-                <div className={styles.section}>
-                    <div className={styles.sectionTitle}>Shapes</div>
-                    <div className={styles.controlsContainer}>
-                        {shapesControls.map((cfg) => (
-                            <ControlItem
-                                key={String(cfg.settingKey)}
-                                {...cfg}
-                            />
-                        ))}
-                    </div>
-                    <div className={styles.notice}>
-                        Resize the active shape: ← ↑ → ↓
-                        <br/>
-                        Reverse with Ctrl / Cmd
-                    </div>
+            <div
+                ref={headerRef}
+                className={`${styles.header} ${toolbarExpanded ? styles.headerExpanded : ''}`}
+            >
+                <span className={styles.title}>Ruler</span>
+
+                <div className={styles.actions}>
+                    <button
+                        className={styles.toggle}
+                        data-no-drag="true"
+                        onClick={() => onChange({linesVisible: !linesVisible})}
+                        title={linesVisible ? 'Hide lines' : 'Show lines'}
+                        type="button"
+                        style={{
+                            backgroundImage: `url("${linesVisible ? icons.showLines : icons.hideLines}")`,
+                        }}
+                    />
+
+                    <button
+                        className={styles.toggle}
+                        data-no-drag="true"
+                        onClick={onClearShapes}
+                        title="Clear shapes"
+                        type="button"
+                        style={{backgroundImage: `url("${icons.clearShapes}")`}}
+                    />
+
+                    <button
+                        className={styles.toggle}
+                        data-no-drag="true"
+                        onClick={onResetPosition}
+                        title="Reset toolbar position"
+                        type="button"
+                        style={{backgroundImage: `url("${icons.resetArrow}")`}}
+                    />
+
+                    <button
+                        className={styles.toggle}
+                        data-no-drag="true"
+                        onClick={() => onChange({toolbarExpanded: !toolbarExpanded})}
+                        title={toolbarExpanded ? 'Collapse' : 'Expand'}
+                        type="button"
+                        style={{backgroundImage: `url("${icons.settings}")`}}
+                    />
+
+                    <button
+                        className={styles.toggle}
+                        data-no-drag="true"
+                        onClick={onToggleToolbarHiddenToSide}
+                        title="Hide to side"
+                        type="button"
+                        style={{backgroundImage: `url("${icons.arrow}")`}}
+                    />
                 </div>
             </div>
-
-            <button className={`${styles.button} ${styles.reset}`} onClick={onReset}>
-                Reset Settings
-            </button>
         </div>
     );
 };

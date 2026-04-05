@@ -1,28 +1,43 @@
-$primary-color: #daa520;
-$primary-color-hover: #bc8500;
-$secondary-color: #f0f0f0;
-$toolbar-toggle-color: #a9a9a9;
-$input-bg-color: rgba(255, 255, 255, 0.2);
-$shape-hover-shadow: rgba(255, 255, 255, 0.7);
-$toolbar-bg-color: rgba(0, 0, 0, 0.7);
-$toolbar-header-bg-color: rgba(0, 0, 0, 0.75);
-$toolbar-border-color: rgba(0, 0, 0, 0.35);
-$shape-size-display-bg: rgba(0, 0, 0, 0.7);
+$color-gold: #daa520;
+$color-gold-hover: #e4b236;
+$color-gold-active: #cf9502;
+$color-white: #f0f0f0;
 
-$box-shadow-toolbar: 0 0 20px rgba(0, 0, 0, 0.4);
-$box-shadow-range-thumb: 0 1px 3px rgba(0, 0, 0, 0.3);
+$surface-dark: rgba(0, 0, 0, 0.75);
+$surface-dark-hover: rgba(0, 0, 0, 0.85);
 
-$font-size-small: 14px;
-$font-size-medium: 16px;
-$font-size-large: 20px;
-$font-size-extra-large: 24px;
+$surface-light: rgba(255, 255, 255, 0.2);
+$surface-light-soft: rgba(255, 255, 255, 0.08);
+$surface-light-hover: rgba(255, 255, 255, 0.24);
+
+$border-light: rgba(255, 255, 255, 0.12);
+$border-light-strong: rgba(255, 255, 255, 0.16);
+$ring-light: rgba(255, 255, 255, 0.7);
+
+$font-size-s: 14px;
+$font-size-m: 16px;
+$font-size-l: 20px;
 
 $font-weight-bold: 700;
 
-$transition-short: 0.2s ease-in-out;
-$transition-medium: 0.3s ease;
+$radius-s: 4px;
+$radius-m: 8px;
+$radius-round: 999px;
 
-$border-radius-s: 4px;
+$blur-ui: 2px;
+
+$transition-fast: 0.2s ease-in-out;
+$transition-base: 0.3s ease;
+
+$glass-highlight: rgba(255, 255, 255, 0.05);
+
+$shadow-toolbar:
+    0 12px 28px rgba(0, 0, 0, 0.28),
+    0 2px 8px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 $glass-highlight;
+
+$shadow-thumb: 0 1px 3px rgba(0, 0, 0, 0.3);
+$text-shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.45);
 
 $z-root: 9999999999;
 $z-overlay: 1;

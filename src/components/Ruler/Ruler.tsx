@@ -1,253 +1,138 @@
-import React, {useState, useEffect, useCallback, useMemo, useRef} from 'react';
-import styles from './Ruler.module.scss';
-import Toolbar from '../Toolbar/Toolbar';
-import ShapeContainer from '../ShapeContainer/ShapeContainer';
+import React, {useEffect, useRef} from 'react';
+import styles from './ruler.module.scss';
 
-export interface Settings {
-    opacity: number;
-    lineColor: string;
-    lineThickness: number;
-    cursorType: string;
-    toolbarVisible: boolean;
-    toolbarPosition: { top: string; left: string };
-    toggleToolbarKey: string;
-    toggleExtensionKey: string;
-    linesVisible: boolean;
-    shapeOpacity: number;
-    shapeColor: string;
+import Toolbar from '../toolbar/toolbar';
+import ShapeContainer from '../shapeContainer/shapeContainer';
+
+import {TOGGLE_VISIBILITY_EVENT} from './ruler.helpers';
+import {useRulerSettings} from './useRulerSettings';
+import {isEditableTarget} from '../../ruler-core/ruler.dom';
+
+interface RulerProps {
+    initialVisible?: boolean;
 }
 
-const defaultSettings: Settings = {
-    opacity: 0.1,
-    lineColor: '#daa520',
-    lineThickness: 1,
-    cursorType: 'default',
-    toolbarVisible: true,
-    toolbarPosition: {top: '10px', left: '10px'},
-    toggleToolbarKey: 'X',
-    toggleExtensionKey: 'Z',
-    linesVisible: true,
-    shapeOpacity: 0.5,
-    shapeColor: '#000000',
-};
-
-const storageKeys: Record<keyof Settings, string> = {
-    opacity: 'ruler_opacity',
-    lineColor: 'ruler_lineColor',
-    lineThickness: 'ruler_lineThickness',
-    cursorType: 'ruler_cursorType',
-    toolbarVisible: 'ruler_toolbarVisible',
-    toolbarPosition: 'ruler_toolbarPosition',
-    toggleToolbarKey: 'ruler_toggleToolbarKey',
-    toggleExtensionKey: 'ruler_toggleExtensionKey',
-    linesVisible: 'ruler_linesVisible',
-    shapeOpacity: 'shape_opacity',
-    shapeColor: 'shape_color',
-};
-
-const Ruler: React.FC = () => {
-    const [opacity, setOpacity] = useState(defaultSettings.opacity);
-    const [lineColor, setLineColor] = useState(defaultSettings.lineColor);
-    const [lineThickness, setLineThickness] = useState(defaultSettings.lineThickness);
-    const [cursorType, setCursorType] = useState(defaultSettings.cursorType);
-    const [toolbarVisible, setToolbarVisible] = useState(defaultSettings.toolbarVisible);
-    const [toolbarPosition, setToolbarPosition] = useState(defaultSettings.toolbarPosition);
-    const [toggleToolbarKey, setToggleToolbarKey] = useState(defaultSettings.toggleToolbarKey);
-    const [toggleExtensionKey, setToggleExtensionKey] = useState(defaultSettings.toggleExtensionKey);
-    const [linesVisible, setLinesVisible] = useState(defaultSettings.linesVisible);
-    const [shapeOpacity, setShapeOpacity] = useState(defaultSettings.shapeOpacity);
-    const [shapeColor, setShapeColor] = useState(defaultSettings.shapeColor);
-
-    const [clearShapesCounter, setClearShapesCounter] = useState(0);
-    const [extensionHidden, setExtensionHidden] = useState(false);
-    const [isReady, setIsReady] = useState(false);
+const Ruler: React.FC<RulerProps> = ({initialVisible = true}) => {
+    const {
+        settings,
+        isReady,
+        isExtensionVisible,
+        isToolbarHiddenToSide,
+        clearShapesCounter,
+        setIsExtensionVisible,
+        handleToolbarChange,
+        handleClearShapes,
+        handleResetPosition,
+        handleToolbarReset,
+        toggleToolbarHiddenToSide,
+    } = useRulerSettings({initialVisible});
 
     const rulerRef = useRef<HTMLDivElement>(null);
-    const prevCursorRef = useRef<string | null>(null);
-    const toolbarPositionRef = useRef(defaultSettings.toolbarPosition);
-    const resizeTimerRef = useRef<number | null>(null);
-    const rafRef = useRef<number | null>(null);
+    const previousCursorRef = useRef<string | null>(null);
+    const mouseRafRef = useRef<number | null>(null);
     const mousePositionRef = useRef({x: 0, y: 0});
 
-    type SettingsSetters = {
-        [K in keyof Settings]: (value: Settings[K]) => void;
-    };
-
-    const setters: SettingsSetters = useMemo(
-        () => ({
-            opacity: setOpacity,
-            lineColor: setLineColor,
-            lineThickness: setLineThickness,
-            cursorType: setCursorType,
-            toolbarVisible: setToolbarVisible,
-            toolbarPosition: setToolbarPosition,
-            toggleToolbarKey: setToggleToolbarKey,
-            toggleExtensionKey: setToggleExtensionKey,
-            linesVisible: setLinesVisible,
-            shapeOpacity: setShapeOpacity,
-            shapeColor: setShapeColor,
-        }),
-        []
-    );
-
-    const saveAndSet = useCallback(
-        <K extends keyof Settings>(key: K, value: Settings[K]) => {
-            void chrome.storage.local.set({[storageKeys[key]]: value});
-            setters[key](value);
-        },
-        [setters]
-    );
-
-    const getSafePosition = useCallback((pos: { top: string; left: string }) => {
-        const topNum = parseInt(pos.top, 10);
-        const leftNum = parseInt(pos.left, 10);
-
-        const TOOLBAR_WIDTH = 360;
-        const TOOLBAR_HEIGHT = 57;
-        const PADDING = 10;
-
-        const safeTop = Math.max(PADDING, Math.min(topNum, window.innerHeight - TOOLBAR_HEIGHT - PADDING));
-        const safeLeft = Math.max(PADDING, Math.min(leftNum, window.innerWidth - TOOLBAR_WIDTH - PADDING));
-
-        return {
-            top: `${safeTop}px`,
-            left: `${safeLeft}px`,
-        };
-    }, []);
-
     useEffect(() => {
-        toolbarPositionRef.current = toolbarPosition;
-    }, [toolbarPosition]);
-
-    useEffect(() => {
-        chrome.storage.local.get(Object.values(storageKeys), (items: Record<string, unknown>) => {
-            (Object.keys(storageKeys) as Array<keyof Settings>).forEach((k) => {
-                const stored = items[storageKeys[k]] as Settings[typeof k] | undefined;
-                const fallback = defaultSettings[k] as Settings[typeof k];
-                const value = stored ?? fallback;
-
-                if (k === 'toolbarPosition') {
-                    setters.toolbarPosition(getSafePosition(value as Settings["toolbarPosition"]));
-                } else if (setters[k]) {
-                    (setters[k] as (value: Settings[keyof Settings]) => void)(
-                        value as Settings[keyof Settings]
-                    );
-                }
-            });
-
-            setIsReady(true);
-        });
-    }, [getSafePosition, setters]);
-
-    useEffect(() => {
-        if (!isReady) return;
-
-        const handleResize = () => {
-            if (resizeTimerRef.current !== null) {
-                window.clearTimeout(resizeTimerRef.current);
-            }
-
-            resizeTimerRef.current = window.setTimeout(() => {
-                const currentPosition = toolbarPositionRef.current;
-                const safePos = getSafePosition(currentPosition);
-
-                if (safePos.top !== currentPosition.top || safePos.left !== currentPosition.left) {
-                    saveAndSet("toolbarPosition", safePos);
-                }
-            }, 150);
+        const handleExternalToggle = () => {
+            setIsExtensionVisible((previous) => !previous);
         };
 
-        window.addEventListener("resize", handleResize);
+        window.addEventListener(TOGGLE_VISIBILITY_EVENT, handleExternalToggle);
 
         return () => {
-            window.removeEventListener("resize", handleResize);
-
-            if (resizeTimerRef.current !== null) {
-                window.clearTimeout(resizeTimerRef.current);
-            }
+            window.removeEventListener(TOGGLE_VISIBILITY_EVENT, handleExternalToggle);
         };
-    }, [isReady, saveAndSet, getSafePosition]);
+    }, [setIsExtensionVisible]);
 
     useEffect(() => {
-        if (!isReady) return;
+        if (!isReady) {
+            return;
+        }
 
-        const updateMousePosition = () => {
-            rafRef.current = null;
+        const updateMouseCssVariables = () => {
+            mouseRafRef.current = null;
 
-            if (rulerRef.current) {
-                rulerRef.current.style.setProperty('--mouse-x', `${mousePositionRef.current.x}px`);
-                rulerRef.current.style.setProperty('--mouse-y', `${mousePositionRef.current.y}px`);
+            if (!rulerRef.current) {
+                return;
+            }
+
+            rulerRef.current.style.setProperty('--mouse-x', `${mousePositionRef.current.x}px`);
+            rulerRef.current.style.setProperty('--mouse-y', `${mousePositionRef.current.y}px`);
+        };
+
+        const handlePointerMove = (event: PointerEvent) => {
+            mousePositionRef.current = {
+                x: event.clientX,
+                y: event.clientY,
+            };
+
+            if (mouseRafRef.current === null) {
+                mouseRafRef.current = window.requestAnimationFrame(updateMouseCssVariables);
             }
         };
 
-        const onPointerMove = (e: PointerEvent) => {
-            mousePositionRef.current = {x: e.clientX, y: e.clientY};
-
-            if (rafRef.current === null) {
-                rafRef.current = window.requestAnimationFrame(updateMousePosition);
-            }
-        };
-
-        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointermove', handlePointerMove);
 
         return () => {
-            document.removeEventListener('pointermove', onPointerMove);
+            document.removeEventListener('pointermove', handlePointerMove);
 
-            if (rafRef.current !== null) {
-                window.cancelAnimationFrame(rafRef.current);
-                rafRef.current = null;
+            if (mouseRafRef.current !== null) {
+                window.cancelAnimationFrame(mouseRafRef.current);
+                mouseRafRef.current = null;
             }
         };
     }, [isReady]);
 
     useEffect(() => {
-        if (!isReady) return;
+        if (!isReady) {
+            return;
+        }
 
-        const onKey = (e: KeyboardEvent) => {
-            const key = e.key.toUpperCase();
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (!isExtensionVisible || isEditableTarget(event.target)) {
+                return;
+            }
 
-            if (key === toggleToolbarKey) {
-                saveAndSet('toolbarVisible', !toolbarVisible);
-            } else if (key === toggleExtensionKey) {
-                setExtensionHidden((prev) => !prev);
+            if (event.code === settings.toggleHideToSideKey) {
+                event.preventDefault();
+                void toggleToolbarHiddenToSide();
             }
         };
 
-        document.addEventListener('keydown', onKey);
-        return () => document.removeEventListener('keydown', onKey);
-    }, [isReady, toggleToolbarKey, toggleExtensionKey, toolbarVisible, saveAndSet]);
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [
+        isExtensionVisible,
+        isReady,
+        settings.toggleHideToSideKey,
+        toggleToolbarHiddenToSide,
+    ]);
 
     useEffect(() => {
-        if (!isReady) return;
-
-        if (prevCursorRef.current === null) {
-            prevCursorRef.current = window.getComputedStyle(document.body).cursor || 'auto';
+        if (!isReady) {
+            return;
         }
 
-        const originalCursor = prevCursorRef.current;
-        document.body.style.cursor = extensionHidden ? originalCursor : cursorType;
+        if (previousCursorRef.current === null) {
+            previousCursorRef.current = window.getComputedStyle(document.body).cursor || 'auto';
+        }
+
+        const originalCursor = previousCursorRef.current;
+
+        if (!isExtensionVisible) {
+            document.body.style.cursor = originalCursor;
+            return;
+        }
+
+        document.body.style.cursor = settings.cursorType;
 
         return () => {
             document.body.style.cursor = originalCursor;
         };
-    }, [isReady, cursorType, extensionHidden]);
-
-    const handleToolbarChange = useCallback((newSettings: Partial<Settings>) => {
-        (Object.keys(newSettings) as (keyof Settings)[]).forEach((key) => {
-            const value = newSettings[key];
-            if (value !== undefined) {
-                saveAndSet(key, value);
-            }
-        });
-    }, [saveAndSet]);
-
-    const handleToolbarReset = useCallback(() => {
-        (Object.keys(defaultSettings) as Array<keyof Settings>).forEach((k) => {
-            saveAndSet(k, defaultSettings[k]);
-        });
-
-        setClearShapesCounter((c) => c + 1);
-    }, [saveAndSet]);
+    }, [isExtensionVisible, isReady, settings.cursorType]);
 
     if (!isReady) {
         return null;
@@ -259,24 +144,24 @@ const Ruler: React.FC = () => {
             ref={rulerRef}
             className={styles.ruler}
             style={{
-                display: extensionHidden ? 'none' : 'block',
+                display: isExtensionVisible ? 'block' : 'none',
                 touchAction: 'none',
                 '--mouse-x': '50vw',
-                '--mouse-y': '50vh'
+                '--mouse-y': '50vh',
             } as React.CSSProperties}
         >
             <div
                 className={styles.overlay}
-                style={{backgroundColor: `rgba(0,0,0,${opacity})`}}
+                style={{backgroundColor: `rgba(0,0,0,${settings.overlayOpacity})`}}
             />
 
             <div
                 className={styles.horizontal}
                 style={{
                     top: 'var(--mouse-y)',
-                    backgroundColor: lineColor,
-                    height: `${lineThickness}px`,
-                    display: linesVisible ? 'block' : 'none',
+                    backgroundColor: settings.lineColor,
+                    height: `${settings.lineThickness}px`,
+                    display: settings.linesVisible ? 'block' : 'none',
                 }}
             />
 
@@ -284,32 +169,44 @@ const Ruler: React.FC = () => {
                 className={styles.vertical}
                 style={{
                     left: 'var(--mouse-x)',
-                    backgroundColor: lineColor,
-                    width: `${lineThickness}px`,
-                    display: linesVisible ? 'block' : 'none',
+                    backgroundColor: settings.lineColor,
+                    width: `${settings.lineThickness}px`,
+                    display: settings.linesVisible ? 'block' : 'none',
                 }}
             />
 
             <ShapeContainer
-                opacity={shapeOpacity}
-                color={shapeColor}
+                enabled={isExtensionVisible}
+                fillOpacity={settings.shapeFillOpacity}
+                fillColor={settings.shapeFillColor}
+                attachNewShapesToPage={settings.attachNewShapesToPage}
                 clearTrigger={clearShapesCounter}
             />
 
             <Toolbar
-                opacity={opacity}
-                lineColor={lineColor}
-                lineThickness={lineThickness}
-                cursorType={cursorType}
-                toolbarVisible={toolbarVisible}
-                toolbarPosition={toolbarPosition}
-                toggleToolbarKey={toggleToolbarKey}
-                toggleExtensionKey={toggleExtensionKey}
-                linesVisible={linesVisible}
-                shapeOpacity={shapeOpacity}
-                shapeColor={shapeColor}
+                overlayOpacity={settings.overlayOpacity}
+                lineColor={settings.lineColor}
+                lineThickness={settings.lineThickness}
+                cursorType={settings.cursorType}
+                toolbarExpanded={settings.toolbarExpanded}
+                toolbarPosition={settings.toolbarPosition}
+                toggleHideToSideKey={settings.toggleHideToSideKey}
+                linesVisible={settings.linesVisible}
+                shapeFillOpacity={settings.shapeFillOpacity}
+                shapeFillColor={settings.shapeFillColor}
+                attachNewShapesToPage={settings.attachNewShapesToPage}
+                isToolbarHiddenToSide={isToolbarHiddenToSide}
                 onChange={handleToolbarChange}
-                onReset={handleToolbarReset}
+                onReset={() => {
+                    void handleToolbarReset();
+                }}
+                onResetPosition={() => {
+                    void handleResetPosition();
+                }}
+                onClearShapes={handleClearShapes}
+                onToggleToolbarHiddenToSide={() => {
+                    void toggleToolbarHiddenToSide();
+                }}
             />
         </div>
     );
