@@ -74,11 +74,29 @@ function mountNow(): void {
 
     injectFonts();
 
-    const container = document.createElement('div');
-    container.id = ROOT_ID;
-    document.body.appendChild(container);
+    const hostContainer = document.createElement('div');
+    hostContainer.id = `hostID_${ROOT_ID}`;
 
-    root = createRoot(container);
+    hostContainer.style.position = 'absolute';
+    hostContainer.style.top = '0';
+    hostContainer.style.left = '0';
+    hostContainer.style.width = '100%';
+    hostContainer.style.height = '0';
+    hostContainer.style.overflow = 'visible';
+    hostContainer.style.zIndex = '9999999999';
+    document.body.appendChild(hostContainer);
+
+    const shadowRoot = hostContainer.attachShadow({ mode: 'open' });
+    const styleLink = document.createElement('link');
+    styleLink.rel = 'stylesheet';
+    styleLink.href = chrome.runtime.getURL('content.css');
+    shadowRoot.appendChild(styleLink);
+
+    const reactRootElement = document.createElement('div');
+    reactRootElement.id = ROOT_ID;
+    shadowRoot.appendChild(reactRootElement);
+
+    root = createRoot(reactRootElement);
     root.render(<Ruler initialVisible={initialVisibleForMount} />);
     cleanupMountObserver();
 }
@@ -119,7 +137,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         return;
     }
 
-    if (message?.command === 'toggle_visibility' || message?.command === 'toggle_extension') {
+    if (message?.command === 'toggle_visibility') {
         if (!root) {
             ensureMounted(true);
         } else {

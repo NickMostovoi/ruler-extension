@@ -40,7 +40,8 @@
     "web_accessible_resources": [{
         "resources": [
             "fonts/*.woff2",
-            "images/*.png"
+            "images/*.png",
+            "content.css"
         ],
         "matches": [
             "<all_urls>"

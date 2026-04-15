@@ -3,7 +3,7 @@
 $toolbar-width: 360px;
 $toolbar-header-height: 58px;
 $toolbar-icon-size: 30px;
-$toolbar-icon-bg-size: 16px;
+$toolbar-icon-bg-size: 18px;
 
 $hidden-tab-width: 16px;
 $hidden-tab-height: 78px;
@@ -11,64 +11,35 @@ $hidden-accent-width: 2px;
 $hidden-accent-offset: 8px;
 $hidden-arrow-size: 18px;
 
-$panel-offset: 8px;
-$panel-transition: 0.18s ease;
-
 .toolbar {
     position: fixed;
     z-index: vars.$z-toolbar;
-    width: min($toolbar-width, calc(100vw - 20px));
-    max-width: calc(100vw - 20px);
-    overflow: visible;
+    width: $toolbar-width;
 }
 
 .toolbarHiddenUi {
     width: $hidden-tab-width;
-    min-width: $hidden-tab-width;
     height: $hidden-tab-height;
-    min-height: $hidden-tab-height;
     padding: 0;
-    overflow: visible;
     background: transparent;
-    box-shadow: none;
 }
 
 .panel {
     position: absolute;
     left: 0;
-    bottom: 100%;
+    bottom: 99%;
     width: 100%;
-    max-height: min(520px, calc(100vh - #{$toolbar-header-height} - 28px));
-    overflow-y: auto;
-    overflow-x: visible;
-    overscroll-behavior: contain;
     background-color: vars.$surface-dark;
     backdrop-filter: blur(vars.$blur-ui);
     border-radius: vars.$radius-m vars.$radius-m 0 0;
     box-shadow: vars.$shadow-toolbar;
-    transform: translateY($panel-offset);
-    transform-origin: bottom center;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition:
-        opacity $panel-transition,
-        transform $panel-transition,
-        visibility $panel-transition;
-    scrollbar-width: thin;
-}
-
-.panelVisible {
-    opacity: 1;
-    transform: translateY(0);
-    visibility: visible;
-    pointer-events: auto;
+    cursor: auto;
 }
 
 .header {
     box-sizing: border-box;
-    min-height: $toolbar-header-height;
-    padding: 14px 16px 14px 20px;
+    height: $toolbar-header-height;
+    padding: 14px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -91,13 +62,11 @@ $panel-transition: 0.18s ease;
 }
 
 .title {
-    min-width: 0;
-    flex: 1 1 auto;
     color: vars.$color-gold;
     font-size: vars.$font-size-l;
     font-weight: vars.$font-weight-bold;
     letter-spacing: 0.2px;
-    text-shadow: vars.$text-shadow-soft;
+    text-shadow: vars.$text-shadow;
     pointer-events: none;
 }
 
@@ -105,12 +74,9 @@ $panel-transition: 0.18s ease;
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-shrink: 0;
 }
 
 .toggle {
-    appearance: none;
-    -webkit-appearance: none;
     width: $toolbar-icon-size;
     height: $toolbar-icon-size;
     display: inline-flex;
@@ -118,14 +84,13 @@ $panel-transition: 0.18s ease;
     justify-content: center;
     padding: 0;
     margin: 0;
-    border: 1px solid vars.$border-light;
+    border: none;
     border-radius: vars.$radius-m;
     background-color: vars.$color-gold;
     background-repeat: no-repeat;
     background-position: center;
-    background-size: $toolbar-icon-bg-size $toolbar-icon-bg-size;
+    background-size: $toolbar-icon-bg-size;
     cursor: pointer;
-    line-height: 0;
     transition: background-color vars.$transition-fast;
 }
 
@@ -147,9 +112,7 @@ $panel-transition: 0.18s ease;
     overflow: hidden;
     background-color: vars.$surface-dark;
     backdrop-filter: blur(vars.$blur-ui);
-    border-right: none;
     border-radius: vars.$radius-m 0 0 vars.$radius-m;
-    box-shadow: vars.$shadow-toolbar;
     cursor: grab;
     touch-action: none;
     user-select: none;
@@ -165,9 +128,7 @@ $panel-transition: 0.18s ease;
     right: 0;
     bottom: $hidden-accent-offset;
     width: $hidden-accent-width;
-    border-radius: vars.$radius-round;
     background-color: vars.$color-gold;
-    opacity: 0.8;
     pointer-events: none;
 }
 
@@ -184,7 +145,6 @@ $panel-transition: 0.18s ease;
     color: vars.$color-white;
     font-size: $hidden-arrow-size;
     font-weight: vars.$font-weight-bold;
-    line-height: 1;
     transform: translateX(-1px);
     pointer-events: none;
     user-select: none;
@@ -194,7 +154,7 @@ $panel-transition: 0.18s ease;
     display: flex;
     flex-direction: column;
     gap: 20px;
-    padding: 14px 20px;
+    padding: 14px 16px;
 }
 
 .section {
@@ -203,7 +163,6 @@ $panel-transition: 0.18s ease;
 }
 
 .sectionTitle {
-    margin-bottom: 10px;
     color: vars.$color-gold;
     font-size: vars.$font-size-m;
     font-weight: vars.$font-weight-bold;
@@ -218,10 +177,6 @@ $panel-transition: 0.18s ease;
     justify-content: space-between;
     gap: 10px;
     margin-bottom: 10px;
-
-    .sectionTitle {
-        margin-bottom: 0;
-    }
 }
 
 .popoverWrap {
@@ -231,18 +186,18 @@ $panel-transition: 0.18s ease;
 }
 
 .infoButton {
-    appearance: none;
+    font-family: inherit;
     width: 22px;
     height: 22px;
     border: none;
+    outline: none;
     border-radius: vars.$radius-round;
     background-color: vars.$surface-light-soft;
     color: vars.$color-white;
     cursor: pointer;
-    font-size: 13px;
+    font-size: vars.$font-size-s;
     font-weight: vars.$font-weight-bold;
-    line-height: 1;
-    transition: background-color vars.$transition-fast, transform vars.$transition-fast;
+    transition: background-color vars.$transition-fast;
 }
 
 .infoButton:hover {
@@ -251,22 +206,19 @@ $panel-transition: 0.18s ease;
 
 .infoButtonActive {
     background-color: vars.$color-gold;
-    transform: translateY(-1px);
 }
 
 .floatingPopover {
     position: absolute;
     right: 0;
-    top: calc(100% + 8px);
-    z-index: 3;
-    width: min(280px, calc(100vw - 56px));
+    top: 30px;
+    width: 280px;
     padding: 10px 12px;
     display: flex;
     flex-direction: column;
     gap: 4px;
     border-radius: vars.$radius-m;
-    background-color: #000;
-    backdrop-filter: blur(vars.$blur-ui);
+    background-color: vars.$color-black;
     box-shadow: vars.$shadow-toolbar;
     color: vars.$color-white;
     font-size: vars.$font-size-s;
@@ -282,22 +234,24 @@ $panel-transition: 0.18s ease;
 .controlsGroup {
     display: flex;
     flex-direction: column;
-    min-width: 0;
 }
 
 .label {
     margin-bottom: 4px;
     color: vars.$color-white;
     font-size: vars.$font-size-s;
+    font-weight: vars.$font-weight-base;
 }
 
 .inputRange {
     appearance: none;
     width: 100%;
-    height: 24px;
+    height: 26px;
     border-radius: vars.$radius-s;
     background-color: vars.$surface-light;
     cursor: pointer;
+    outline: none;
+    transition: background-color vars.$transition-fast;
 
     &::-webkit-slider-thumb {
         appearance: none;
@@ -313,35 +267,37 @@ $panel-transition: 0.18s ease;
     &:hover::-webkit-slider-thumb {
         background-color: vars.$color-gold-hover;
     }
+
+    &:hover {
+        background-color: vars.$surface-light-hover;
+    }
 }
 
 .inputSelect {
-    appearance: none;
     width: 100%;
-    height: 30px;
-    padding: 4px 30px 4px 14px;
+    height: 26px;
+    padding: 4px 30px 4px 4px;
     border: none;
     border-radius: vars.$radius-s;
     background-color: vars.$surface-light;
-    background-image:
-        linear-gradient(45deg, transparent 50%, vars.$color-white 50%),
-        linear-gradient(135deg, vars.$color-white 50%, transparent 50%);
-    background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%;
-    background-size: 5px 5px;
-    background-repeat: no-repeat;
+    outline: none;
     color: vars.$color-white;
     cursor: pointer;
+    transition: background-color vars.$transition-fast;
 
     option {
         background-color: vars.$color-gold;
         color: vars.$color-white;
     }
+
+    &:hover {
+        background-color: vars.$surface-light-hover;
+    }
 }
 
 .inputColor {
-    appearance: none;
-    width: 55px;
-    height: 30px;
+    width: 100%;
+    height: 26px;
     padding: 0;
     border: none;
     border-radius: vars.$radius-s;
@@ -358,6 +314,7 @@ $panel-transition: 0.18s ease;
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    margin-top: 3px;
 }
 
 .checkboxLabel {
@@ -369,11 +326,11 @@ $panel-transition: 0.18s ease;
     appearance: none;
     width: 20px;
     height: 20px;
-    margin-top: 4px;
     position: relative;
     border-radius: vars.$radius-s;
     background-color: vars.$surface-light;
     cursor: pointer;
+    transition: background-color vars.$transition-fast;
 
     &:checked {
         background-color: vars.$color-gold;
@@ -391,11 +348,15 @@ $panel-transition: 0.18s ease;
         color: vars.$color-white;
         transform: translate(-50%, -50%);
     }
+
+    &:hover {
+        background-color: vars.$surface-light-hover;
+    }
 }
 
 .inputKey {
     width: 100%;
-    height: 30px;
+    height: 26px;
     border: none;
     outline: none;
     border-radius: vars.$radius-s;
@@ -404,32 +365,25 @@ $panel-transition: 0.18s ease;
     font-size: vars.$font-size-m;
     text-align: center;
     cursor: pointer;
-    transition:
-        background-color vars.$transition-fast,
-        box-shadow vars.$transition-fast,
-        transform vars.$transition-fast;
+    transition: background-color vars.$transition-fast;
+
+    &:hover {
+        background-color: vars.$surface-light-hover;
+    }
 }
 
-.inputKey:hover {
-    background-color: vars.$surface-light-hover;
-}
-
-.inputKey:focus,
-.inputKey:focus-visible,
 .inputKeyActive {
     background-color: vars.$surface-light-hover;
-    box-shadow: 0 0 0 1px vars.$ring-light;
-    transform: translateY(-1px);
 }
 
 .keyHint {
     min-height: 16px;
-    margin-top: 4px;
-    color: rgba(255, 255, 255, 0.72);
-    font-size: 12px;
-    line-height: 1.3;
-    opacity: 0.75;
-    transition: opacity vars.$transition-fast, color vars.$transition-fast;
+    color: vars.$color-white;
+    font-size: vars.$font-size-xs;
+    opacity: 0.6;
+    transition:
+        opacity vars.$transition-fast,
+        color vars.$transition-fast;
 }
 
 .keyHintVisible {
@@ -438,12 +392,13 @@ $panel-transition: 0.18s ease;
 }
 
 .button {
+    font-family: inherit;
     padding: 10px 20px;
     border: none;
     color: vars.$color-white;
     font-size: vars.$font-size-m;
     cursor: pointer;
-    transition: background-color vars.$transition-base;
+    transition: background-color vars.$transition-fast;
 }
 
 .reset {
@@ -456,7 +411,6 @@ $panel-transition: 0.18s ease;
     color: vars.$color-white;
     font-size: vars.$font-size-m;
     cursor: pointer;
-    transition: background-color vars.$transition-base;
 
     &:hover {
         background-color: vars.$color-gold-hover;
@@ -470,27 +424,9 @@ $panel-transition: 0.18s ease;
 @media (max-width: 420px) {
     .content {
         gap: 16px;
-        padding: 12px 14px;
-    }
-
-    .header {
-        padding: 12px 12px 12px 14px;
-        gap: 10px;
-    }
-
-    .actions {
-        gap: 6px;
-    }
-
-    .title {
-        font-size: 18px;
     }
 
     .controlsContainer {
-        gap: 10px;
-    }
-
-    .floatingPopover {
-        width: min(250px, calc(100vw - 44px));
+        gap: 8px 12px;
     }
 }

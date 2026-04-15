@@ -23,7 +23,7 @@ $delete-offset: 12px;
     transition: box-shadow vars.$transition-fast;
 
     &:hover {
-        box-shadow: 0 0 0 1px vars.$ring-light;
+        box-shadow: 0 0 0 1px vars.$shadow-toolbar;
     }
 
     &:active {

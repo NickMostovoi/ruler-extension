@@ -9,26 +9,18 @@ import {
 import {getResponsiveToolbarWidth} from '../ruler/ruler.helpers';
 
 import {
+    ToolbarProps,
     ToolbarHelpPopoverType,
     TOOLBAR_CLICK_MAX_DISTANCE,
     TOOLBAR_CLICK_MAX_DURATION,
     TOOLBAR_DRAG_THRESHOLD,
+    splitToolbarControls,
+    buildToolbarControls,
 } from './toolbar.helpers';
 
 import {
-    buildToolbarControls,
     ControlItem,
-    splitToolbarControls,
 } from './toolbar.controls';
-
-export interface ToolbarProps extends RulerSettings {
-    isToolbarHiddenToSide: boolean;
-    onChange: (settings: Partial<RulerSettings>) => void;
-    onReset: () => void;
-    onResetPosition: () => void;
-    onClearShapes: () => void;
-    onToggleToolbarHiddenToSide: () => void;
-}
 
 const Toolbar: React.FC<ToolbarProps> = ({
     overlayOpacity,
@@ -58,6 +50,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
     const [isDesktop, setIsDesktop] = useState(false);
     const [activePopover, setActivePopover] = useState<ToolbarHelpPopoverType>(null);
 
+    const [windowWidth, setWindowWidth] = useState(
+        typeof window !== 'undefined' ? window.innerWidth : 0
+    );
+
     const settings: RulerSettings = {
         overlayOpacity,
         lineColor,
@@ -82,6 +78,17 @@ const Toolbar: React.FC<ToolbarProps> = ({
     };
 
     useEffect(() => {
+        if (toolbarPosition.left !== '50%') {
+            return;
+        }
+
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+
+        return () => window.removeEventListener('resize', handleResize);
+    }, [toolbarPosition.left]);
+
+    useEffect(() => {
         if (typeof window === 'undefined' || !window.matchMedia) {
             return;
         }
@@ -94,16 +101,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
         if (typeof media.addEventListener === 'function') {
             media.addEventListener('change', updateMatch);
 
-            return () => {
-                media.removeEventListener('change', updateMatch);
-            };
+            return () => media.removeEventListener('change', updateMatch);
         }
-
-        media.addListener(updateMatch);
-
-        return () => {
-            media.removeListener(updateMatch);
-        };
     }, []);
 
     useEffect(() => {
@@ -145,9 +144,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
     useEffect(() => {
         const container = containerRef.current;
-        const dragHandle = isToolbarHiddenToSide
-            ? hiddenHandleRef.current
-            : headerRef.current;
+        const dragHandle = isToolbarHiddenToSide ? hiddenHandleRef.current : headerRef.current;
 
         if (!container || !dragHandle) {
             return;
@@ -221,11 +218,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
                 return;
             }
 
-            const movedEnough =
-                Math.hypot(
-                    event.clientX - startClientX,
-                    event.clientY - startClientY
-                ) >= TOOLBAR_DRAG_THRESHOLD;
+            const movedEnough = Math.hypot(
+                event.clientX - startClientX,
+                event.clientY - startClientY
+            ) >= TOOLBAR_DRAG_THRESHOLD;
 
             if (!isDragging && !movedEnough) {
                 return;
@@ -318,7 +314,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
     const {generalControls, shapeControls} = splitToolbarControls(controls);
 
     const resolvedLeft = toolbarPosition.left === '50%'
-        ? `${Math.max(10, Math.round(window.innerWidth / 2 - getResponsiveToolbarWidth() / 2))}px`
+        ? `${Math.max(10, Math.round(windowWidth / 2 - getResponsiveToolbarWidth() / 2))}px`
         : toolbarPosition.left;
 
     if (isToolbarHiddenToSide) {
@@ -346,9 +342,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         }
                     }}
                 >
-                    <span className={styles.hiddenArrow} aria-hidden="true">
-                        ‹
-                    </span>
+                    <span className={styles.hiddenArrow} aria-hidden="true">‹</span>
                 </div>
             </div>
         );
@@ -365,7 +359,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
         >
             {toolbarExpanded && (
                 <div
-                    className={`${styles.panel} ${styles.panelVisible}`}
+                    className={styles.panel}
                     aria-hidden={!toolbarExpanded}
                 >
                     <div className={styles.content}>
@@ -431,6 +425,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
                                     {activePopover === 'shape' && (
                                         <div className={styles.floatingPopover}>
+                                            <div><strong>Double click</strong> = activate shape</div>
                                             <div><strong>Arrow</strong> = resize by 1px</div>
                                             <div><strong>Shift + Arrow</strong> = resize by 10px</div>
                                             <div><strong>Ctrl / Cmd + Arrow</strong> = reverse resize</div>
@@ -461,10 +456,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
                 </div>
             )}
 
-            <div
-                ref={headerRef}
-                className={`${styles.header} ${toolbarExpanded ? styles.headerExpanded : ''}`}
-            >
+            <div ref={headerRef} className={`${styles.header} ${toolbarExpanded ? styles.headerExpanded : ''}`}>
                 <span className={styles.title}>Ruler</span>
 
                 <div className={styles.actions}>
@@ -478,7 +470,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
                             backgroundImage: `url("${linesVisible ? icons.showLines : icons.hideLines}")`,
                         }}
                     />
-
                     <button
                         className={styles.toggle}
                         data-no-drag="true"
@@ -487,7 +478,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         type="button"
                         style={{backgroundImage: `url("${icons.clearShapes}")`}}
                     />
-
                     <button
                         className={styles.toggle}
                         data-no-drag="true"
@@ -496,7 +486,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         type="button"
                         style={{backgroundImage: `url("${icons.resetArrow}")`}}
                     />
-
                     <button
                         className={styles.toggle}
                         data-no-drag="true"
@@ -505,7 +494,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
                         type="button"
                         style={{backgroundImage: `url("${icons.settings}")`}}
                     />
-
                     <button
                         className={styles.toggle}
                         data-no-drag="true"

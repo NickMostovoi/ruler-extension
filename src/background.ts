@@ -22,15 +22,6 @@ async function ensureContentScript(tabId: number): Promise<boolean> {
     }
 
     try {
-        await chrome.scripting.insertCSS({
-            target: {tabId},
-            files: ['content.css']
-        });
-    } catch {
-        // content.css may already be present on the page lifecycle; continue with script injection.
-    }
-
-    try {
         await chrome.scripting.executeScript({
             target: {tabId},
             files: ['content.js']

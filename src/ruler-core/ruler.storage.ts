@@ -34,7 +34,7 @@ function isValidToolbarPosition(value: unknown): value is ToolbarPosition {
         return false;
     }
 
-    const candidate = value as ToolbarPosition;
+    const candidate = value as Record<string, unknown>;
 
     return typeof candidate.top === 'string' && typeof candidate.left === 'string';
 }
@@ -116,77 +116,36 @@ export function createDefaultRulerSettings(
 export async function loadStoredRulerState(
     defaultSettings: RulerSettings
 ): Promise<StoredSettingsResult> {
-    const requestedKeys = [
-        ...Object.values(RULER_STORAGE_KEYS),
-        UI_HIDDEN_STORAGE_KEY,
-    ];
-
+    const requestedKeys = [...Object.values(RULER_STORAGE_KEYS), UI_HIDDEN_STORAGE_KEY];
     const items = await chrome.storage.local.get(requestedKeys);
 
-    const storedToolbarPosition = items[RULER_STORAGE_KEYS.toolbarPosition];
+    const getSafe = <T>(key: keyof RulerSettings, type: string): T => {
+        const val = items[RULER_STORAGE_KEYS[key]];
+        return (typeof val === type ? val : defaultSettings[key]) as T;
+    };
 
     const settings: RulerSettings = {
-        overlayOpacity:
-            typeof items[RULER_STORAGE_KEYS.overlayOpacity] === 'number'
-                ? items[RULER_STORAGE_KEYS.overlayOpacity]
-                : defaultSettings.overlayOpacity,
+        overlayOpacity: getSafe('overlayOpacity', 'number'),
+        lineColor: getSafe('lineColor', 'string'),
+        lineThickness: getSafe('lineThickness', 'number'),
+        cursorType: getSafe('cursorType', 'string'),
+        toolbarExpanded: getSafe('toolbarExpanded', 'boolean'),
+        toggleHideToSideKey: getSafe('toggleHideToSideKey', 'string'),
+        linesVisible: getSafe('linesVisible', 'boolean'),
+        shapeFillOpacity: getSafe('shapeFillOpacity', 'number'),
+        shapeFillColor: getSafe('shapeFillColor', 'string'),
+        attachNewShapesToPage: getSafe('attachNewShapesToPage', 'boolean'),
 
-        lineColor:
-            typeof items[RULER_STORAGE_KEYS.lineColor] === 'string'
-                ? items[RULER_STORAGE_KEYS.lineColor]
-                : defaultSettings.lineColor,
-
-        lineThickness:
-            typeof items[RULER_STORAGE_KEYS.lineThickness] === 'number'
-                ? items[RULER_STORAGE_KEYS.lineThickness]
-                : defaultSettings.lineThickness,
-
-        cursorType:
-            typeof items[RULER_STORAGE_KEYS.cursorType] === 'string'
-                ? items[RULER_STORAGE_KEYS.cursorType]
-                : defaultSettings.cursorType,
-
-        toolbarExpanded:
-            typeof items[RULER_STORAGE_KEYS.toolbarExpanded] === 'boolean'
-                ? items[RULER_STORAGE_KEYS.toolbarExpanded]
-                : defaultSettings.toolbarExpanded,
-
-        toolbarPosition: isValidToolbarPosition(storedToolbarPosition)
-            ? storedToolbarPosition
+        toolbarPosition: isValidToolbarPosition(items[RULER_STORAGE_KEYS.toolbarPosition])
+            ? items[RULER_STORAGE_KEYS.toolbarPosition]
             : defaultSettings.toolbarPosition,
-
-        toggleHideToSideKey:
-            typeof items[RULER_STORAGE_KEYS.toggleHideToSideKey] === 'string'
-                ? items[RULER_STORAGE_KEYS.toggleHideToSideKey]
-                : defaultSettings.toggleHideToSideKey,
-
-        linesVisible:
-            typeof items[RULER_STORAGE_KEYS.linesVisible] === 'boolean'
-                ? items[RULER_STORAGE_KEYS.linesVisible]
-                : defaultSettings.linesVisible,
-
-        shapeFillOpacity:
-            typeof items[RULER_STORAGE_KEYS.shapeFillOpacity] === 'number'
-                ? items[RULER_STORAGE_KEYS.shapeFillOpacity]
-                : defaultSettings.shapeFillOpacity,
-
-        shapeFillColor:
-            typeof items[RULER_STORAGE_KEYS.shapeFillColor] === 'string'
-                ? items[RULER_STORAGE_KEYS.shapeFillColor]
-                : defaultSettings.shapeFillColor,
-
-        attachNewShapesToPage:
-            typeof items[RULER_STORAGE_KEYS.attachNewShapesToPage] === 'boolean'
-                ? items[RULER_STORAGE_KEYS.attachNewShapesToPage]
-                : defaultSettings.attachNewShapesToPage,
     };
 
     return {
         settings,
-        isToolbarHiddenToSide:
-            typeof items[UI_HIDDEN_STORAGE_KEY] === 'boolean'
-                ? items[UI_HIDDEN_STORAGE_KEY]
-                : false,
+        isToolbarHiddenToSide: typeof items[UI_HIDDEN_STORAGE_KEY] === 'boolean'
+            ? items[UI_HIDDEN_STORAGE_KEY]
+            : false,
     };
 }
 
@@ -216,14 +175,14 @@ export async function saveToolbarHiddenState(
 }
 
 export function createDebouncedRulerSettingsWriter(
-    delayMs = 160
+    delayMs = 150
 ): DebouncedSettingsWriter {
-    let timerId: number | null = null;
+    let timerId: ReturnType<typeof setTimeout> | null = null;
     let pending: Partial<RulerSettings> = {};
 
     const flush = async (): Promise<void> => {
         if (timerId !== null) {
-            window.clearTimeout(timerId);
+            clearTimeout(timerId);
             timerId = null;
         }
 
@@ -244,17 +203,17 @@ export function createDebouncedRulerSettingsWriter(
         };
 
         if (timerId !== null) {
-            window.clearTimeout(timerId);
+            clearTimeout(timerId);
         }
 
-        timerId = window.setTimeout(() => {
+        timerId = setTimeout(() => {
             void flush();
         }, delayMs);
     };
 
     const cancel = (): void => {
         if (timerId !== null) {
-            window.clearTimeout(timerId);
+            clearTimeout(timerId);
             timerId = null;
         }
 
@@ -264,7 +223,7 @@ export function createDebouncedRulerSettingsWriter(
     return {
         schedule,
         flush,
-        cancel,
+        cancel
     };
 }
 

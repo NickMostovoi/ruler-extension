@@ -6,7 +6,6 @@ import ShapeContainer from '../shapeContainer/shapeContainer';
 
 import {TOGGLE_VISIBILITY_EVENT} from './ruler.helpers';
 import {useRulerSettings} from './useRulerSettings';
-import {isEditableTarget} from '../../ruler-core/ruler.dom';
 
 interface RulerProps {
     initialVisible?: boolean;
@@ -89,7 +88,7 @@ const Ruler: React.FC<RulerProps> = ({initialVisible = true}) => {
         }
 
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (!isExtensionVisible || isEditableTarget(event.target)) {
+            if (!isExtensionVisible) {
                 return;
             }
 

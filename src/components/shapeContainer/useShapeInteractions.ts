@@ -6,8 +6,6 @@ import {
     ShapeResizeDirection,
 } from '../../ruler-core/ruler.types';
 
-import {isEditableTarget} from '../../ruler-core/ruler.dom';
-
 import {
     computeFreeResize,
     computeProportionalResize,
@@ -444,7 +442,7 @@ export function useShapeInteractions({
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (!enabled || isEditableTarget(event.target)) {
+            if (!enabled) {
                 return;
             }
 
