@@ -10,7 +10,7 @@ interface UseShapeStateParams {
 
 interface UseShapeStateResult {
     shapes: ShapeState[];
-    shapesRef: React.MutableRefObject<ShapeState[]>;
+    shapesRef: { current: ShapeState[] };
     setShapesState: (updater: SetStateAction<ShapeState[]>) => void;
     removeShape: (shapeId: string) => void;
     toggleShapeActiveState: (shapeId: string) => void;

@@ -23,7 +23,7 @@ $delete-offset: 12px;
     transition: box-shadow vars.$transition-fast;
 
     &:hover {
-        box-shadow: 0 0 0 1px vars.$shadow-toolbar;
+        box-shadow: vars.$shape-hover-shadow;
     }
 
     &:active {
@@ -49,12 +49,6 @@ $delete-offset: 12px;
     top: -$handle-offset;
     left: -$handle-offset;
     cursor: nwse-resize;
-}
-
-.ne {
-    top: -$handle-offset;
-    right: -$handle-offset;
-    cursor: nesw-resize;
 }
 
 .sw {
@@ -114,9 +108,8 @@ $delete-offset: 12px;
     border-radius: vars.$radius-round;
     cursor: pointer;
     transition:
-        transform vars.$transition-fast,
-        background-color vars.$transition-fast,
-        box-shadow vars.$transition-fast;
+            transform vars.$transition-fast,
+            background-color vars.$transition-fast;
 
     &:hover {
         background-color: vars.$color-gold-hover;
@@ -133,8 +126,7 @@ $delete-offset: 12px;
     border-radius: vars.$radius-s;
     background-color: vars.$surface-dark;
     color: vars.$color-white;
-    font-family: monospace;
-    font-size: vars.$font-size-s;
+    font-size: vars.$font-size-xs;
     white-space: nowrap;
     user-select: none;
     pointer-events: none;

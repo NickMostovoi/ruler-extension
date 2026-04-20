@@ -1,4 +1,10 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+    PointerEvent as ReactPointerEvent
+} from 'react';
 
 import {
     RectState,
@@ -53,13 +59,13 @@ interface ShapeTapState extends TapState {
 
 interface UseShapeInteractionsResult {
     shapes: ReturnType<typeof useShapeState>['shapes'];
-    handleContainerPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
+    handleContainerPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
     handleShapePointerDown: (
-        event: React.PointerEvent<HTMLDivElement>,
+        event: ReactPointerEvent<HTMLDivElement>,
         shapeId: string
     ) => void;
     handleResizePointerDown: (
-        event: React.PointerEvent<HTMLDivElement>,
+        event: ReactPointerEvent<HTMLDivElement>,
         shapeId: string,
         direction: ShapeResizeDirection
     ) => void;
@@ -175,7 +181,7 @@ export function useShapeInteractions({
         ]);
     }, [attachNewShapesToPage, fillColor, fillOpacity, setShapesState]);
 
-    const handleContainerPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const handleContainerPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
         if (!enabled || event.target !== event.currentTarget) {
             return;
         }
@@ -218,7 +224,7 @@ export function useShapeInteractions({
     }, [createShapeAtPointer, enabled]);
 
     const handleResizePointerDown = useCallback((
-        event: React.PointerEvent<HTMLDivElement>,
+        event: ReactPointerEvent<HTMLDivElement>,
         shapeId: string,
         direction: ShapeResizeDirection
     ) => {
@@ -249,7 +255,7 @@ export function useShapeInteractions({
     }, [shapesRef]);
 
     const handleShapePointerDown = useCallback((
-        event: React.PointerEvent<HTMLDivElement>,
+        event: ReactPointerEvent<HTMLDivElement>,
         shapeId: string
     ) => {
         event.stopPropagation();
