@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
-    "name": "Ruler Tool",
+    "name": "Ruler: Measure & Align",
     "version": "1.6",
-    "description": "A helpful ruler extension",
+    "description": "Pixel-perfect ruler, shape drawing & alignment guides",
     "permissions": [
         "activeTab",
         "scripting",

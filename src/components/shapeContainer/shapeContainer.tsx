@@ -14,7 +14,7 @@ import {
 
 import {useShapeInteractions} from './useShapeInteractions';
 
-export interface ShapeContainerProps {
+interface ShapeContainerProps {
     enabled: boolean;
     fillOpacity: number;
     fillColor: string;

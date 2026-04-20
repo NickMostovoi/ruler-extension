@@ -1,10 +1,10 @@
 import {ToolbarPosition} from '../../ruler-core/ruler.types';
 
-export const TOOLBAR_WIDTH = 360;
-export const TOOLBAR_HEADER_HEIGHT = 58;
-export const HIDDEN_UI_HEIGHT = 84;
-export const PADDING = 10;
-export const HIDDEN_UI_BOTTOM_GAP = 4;
+const TOOLBAR_WIDTH = 360;
+const TOOLBAR_HEADER_HEIGHT = 58;
+const HIDDEN_UI_HEIGHT = 84;
+const PADDING = 10;
+const HIDDEN_UI_BOTTOM_GAP = 4;
 
 export const TOGGLE_VISIBILITY_EVENT = 'ruler-extension:toggle-visibility';
 
@@ -67,7 +67,7 @@ export function getResponsiveToolbarWidth(): number {
     return Math.min(TOOLBAR_WIDTH, Math.max(0, window.innerWidth - PADDING * 2));
 }
 
-export function normalizeToolbarTop(top: string): number {
+function normalizeToolbarTop(top: string): number {
     if (typeof window === 'undefined') {
         return PADDING;
     }

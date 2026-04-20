@@ -1,4 +1,11 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+    Dispatch,
+    SetStateAction
+} from 'react';
 
 import {
     RulerSettings,
@@ -32,7 +39,7 @@ interface UseRulerSettingsResult {
     isExtensionVisible: boolean;
     isToolbarHiddenToSide: boolean;
     clearShapesCounter: number;
-    setIsExtensionVisible: React.Dispatch<React.SetStateAction<boolean>>;
+    setIsExtensionVisible: Dispatch<SetStateAction<boolean>>;
     handleToolbarChange: (partialSettings: Partial<RulerSettings>) => void;
     handleClearShapes: () => void;
     handleResetPosition: () => Promise<void>;

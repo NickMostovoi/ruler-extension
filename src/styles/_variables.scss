@@ -14,9 +14,10 @@ $border-light-strong: rgba(255, 255, 255, 0.16);
 
 $glass-highlight: rgba(255, 255, 255, 0.05);
 
-$shadow-toolbar: rgb(0 0 0) 0 0 20px -10px;
+$shape-hover-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7);
+$shadow-toolbar: 0 0 20px -10px rgb(0 0 0);
 $shadow-thumb: 0 1px 3px rgba(0, 0, 0, 0.3);
-$text-shadow: -2px 2px 2px #000000;
+$text-shadow: -2px 2px 2px rgb(0 0 0);
 
 $font-size-xs: 12px;
 $font-size-s: 14px;
@@ -39,3 +40,5 @@ $z-overlay: 1;
 $z-shapes: 2;
 $z-crosshairs: 3;
 $z-toolbar: 4;
+
+

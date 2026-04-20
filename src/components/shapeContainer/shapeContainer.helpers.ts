@@ -9,7 +9,6 @@ export const MIN_SHAPE_SIZE = 5;
 export const SHAPE_RESIZE_DIRECTIONS: ShapeResizeDirection[] = [
     'nw',
     'n',
-    'ne',
     'e',
     'se',
     's',
